@@ -230,9 +230,65 @@ describe("Continuation effect", () => {
       return { state };
     });
     let store = createStore(reducer, enhancerFactory({
-      metaKey: "meta",
       idKey: "id",
       originKey: "origin",
+      parentKey: "parent",
+      idFn: (a) => a.type
+    }));
+
+    store.dispatch({ type: "A" });
+    expect(await aPromise).to.deep.equal({
+      type: "A",
+      id: "A",
+      origin: "A"
+    });
+    expect(await bPromise).to.deep.equal({
+      type: "B",
+      id: "B",
+      origin: "A",
+      parent: "A"
+    });
+    expect(await cPromise).to.deep.equal({
+      type: "C",
+      id: "C",
+      origin: "A",
+      parent: "B"
+    });
+  });
+
+  it("can be run with fingerprint vars under a metaKey", async () => {
+    // Create some deferrals to await async action terminating
+    let aResolve: (x: any) => any;
+    let aPromise = new Promise((resolve) => aResolve = resolve);
+    let bResolve: (x: any) => any;
+    let bPromise = new Promise((resolve) => bResolve = resolve);
+
+    const reducer = wrap((state = {}, action: { type: string }) => {
+      switch (action.type) {
+        case "A":
+          return {
+            state,
+            effects: (dispatch) => [
+              call(dispatch, { type: "B"}),
+              call(aResolve, action)
+            ]
+          };
+        case "B":
+          return {
+            state,
+            effects: (dispatch) => [
+              call(dispatch, { type: "C"}),
+              call(bResolve, action)
+            ]
+          };
+      }
+      return { state };
+    });
+    let store = createStore(reducer, enhancerFactory({
+      idKey: "id",
+      metaKey: "meta",
+      originKey: "origin",
+      parentKey: "parent",
       idFn: (a) => a.type
     }));
 
@@ -240,22 +296,58 @@ describe("Continuation effect", () => {
     expect(await aPromise).to.deep.equal({
       type: "A",
       meta: {
-        id: "A"
+        id: "A",
+        origin: "A"
       }
     });
     expect(await bPromise).to.deep.equal({
       type: "B",
       meta: {
         id: "B",
-        origin: "A"
+        origin: "A",
+        parent: "A"
       }
     });
-    expect(await cPromise).to.deep.equal({
-      type: "C",
-      meta: {
-        id: "C",
-        origin: "B"
+  });
+
+  it("can be run without fingerprinting", async () => {
+    // Create some deferrals to await async action terminating
+    let aResolve: (x: any) => any;
+    let aPromise = new Promise((resolve) => aResolve = resolve);
+    let bResolve: (x: any) => any;
+    let bPromise = new Promise((resolve) => bResolve = resolve);
+
+    const reducer = wrap((state = {}, action: { type: string }) => {
+      switch (action.type) {
+        case "A":
+          return {
+            state,
+            effects: (dispatch) => [
+              call(dispatch, { type: "B"}),
+              call(aResolve, action)
+            ]
+          };
+        case "B":
+          return {
+            state,
+            effects: (dispatch) => [
+              call(dispatch, { type: "C"}),
+              call(bResolve, action)
+            ]
+          };
       }
+      return { state };
+    });
+    let store = createStore(reducer, enhancerFactory({
+      fingerprinting: false
+    }));
+
+    store.dispatch({ type: "A" });
+    expect(await aPromise).to.deep.equal({
+      type: "A",
+    });
+    expect(await bPromise).to.deep.equal({
+      type: "B",
     });
   });
 });

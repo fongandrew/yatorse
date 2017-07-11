@@ -36,15 +36,35 @@ const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
     let ret: A;
     let effects: typeof Context.effects;
 
-    // Fingerprint action
-    const id = config.idFn(action);
-    action = {
-      ...(action as Action),
-      [config.metaKey]: {
+    // Fingerprint action, determine origin if any
+    let id: string|undefined;
+    let origin: string|undefined;
+    if (config.fingerprinting) {
+      id = config.idFn(action);
+      let meta = (config.metaKey && (action as any)[config.metaKey]);
+      origin =
+        (meta && meta[config.originKey]) ||
+        (action as any)[config.originKey] ||
+        id;
+
+      let fingerprint: any = {
         [config.idKey]: id,
-        ...((action as any).meta || {})
+        [config.originKey]: origin
+      };
+      if (config.metaKey) {
+        fingerprint = {
+          [config.metaKey]: {
+            ...(meta || {}),
+            ...fingerprint
+          }
+        };
       }
-    } as A;
+
+      action = {
+        ...(action as Action),
+        ...fingerprint
+      } as A;
+    }
 
     try {
       ret = dispatch(action);
@@ -61,12 +81,21 @@ const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
       Wrapped the dispatch function we give to function for processing
       effects so it records origin.
     */
+    let fingerprint: any = (id && origin) ? {
+      [config.parentKey]: id,
+      [config.originKey]: origin
+    } : {};
+    if (config.metaKey) {
+      fingerprint = {
+        [config.metaKey]: {
+          ...((action as any)[config.metaKey] || {}),
+          ...fingerprint
+        }
+      };
+    }
     let effectsDispatch = (action: Action) => wrappedDispatch({
       ...(action as Action),
-      [config.metaKey]: {
-        [config.originKey]: id,
-        ...((action as any).meta || {})
-      },
+      ...fingerprint
     });
 
     if (! config.disableSideEffects) {
@@ -151,9 +180,10 @@ const idFn = (() => {
 const DEFAULT_CONFIG: FullConfig = {
   maxIterations: 15,
   disableSideEffects: false,
-  metaKey: "meta",
-  idKey: "id",
-  originKey: "origin",
+  fingerprinting: true,
+  idKey: "__id",
+  originKey: "__origin",
+  parentKey: "__parent",
   idFn
 };
 

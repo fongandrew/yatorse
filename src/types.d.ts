@@ -93,16 +93,26 @@ export interface FullConfig {
 
   /*
     Effects may include dispatching other actions in the future. To help
-    track things, we add a string `meta.id` to action to identify the
-    original, and a `meta.origin` to identify the originating action.
-    Can change the `meta`, `id`, or `origin` keys respectively here.
+    track things, we fingerprint each action with an ID by default (which
+    can get picked by Redux's dev tools) and the actions's parent (the last
+    action responsible for dispatching this one) and the action's origin (the
+    original non-side-effect-dispatch that triggered our action chain).
+
+      * Set fingerprint=false to disable fingerprinting.
+      * metaKey - If set, all of the fingerprinting properties are grouped
+        under a "meta" key (a la Flux Standard Actions).
+      * idKey - Key for the fingerprint for this action
+      * parentKey - Key for parent's ID
+      * originKey - Key for origin's ID
   */
-  metaKey: string;
+  fingerprinting: boolean;
+  metaKey?: string;
   idKey: string;
+  parentKey: string;
   originKey: string;
 
   /*
-    Custom function for ID generation
+    Custom function for fingerprint generation
   */
   idFn: (action: Action) => string;
 }
