@@ -6,11 +6,11 @@ import { EnhancedReducer } from "./types";
   Wrapper that takes an enhanced reducer function and returns a normal
   state-only reducer. Used to ensure compatability with standard Redux.
 */
-const wrap = <S, I = undefined>(r: EnhancedReducer<S>): Reducer<S> => {
+const wrap = <S, I = undefined>(r: EnhancedReducer<S, I>): Reducer<S> => {
   let lastInstance: I|undefined;
   let lastIteration: number|undefined;
 
-  return <A extends Action>(currentState: S, action: A) => {
+  return (currentState: S, action: Action) => {
     /*
       New iteration => reset instance values. Instance var is intended only
       to be shared between multiple runs of same reducer responding to
@@ -48,7 +48,7 @@ const wrap = <S, I = undefined>(r: EnhancedReducer<S>): Reducer<S> => {
     }
 
     return state;
-  }
+  };
 };
 
 export default wrap;

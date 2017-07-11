@@ -10,4 +10,12 @@ const Context: ContextType = {
   actions: []
 };
 
+export function reset() {
+  for (let key in Context) {
+    delete (Context as any)[key];
+  }
+  Context.iteration = 0;
+  Context.actions = [];
+}
+
 export default Context;

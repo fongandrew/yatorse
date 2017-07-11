@@ -47,8 +47,8 @@ export interface Continuation<S, I = undefined> {
   instance?: I;
 }
 
-export type EnhancedReducer<S> = <A extends Action, I = undefined>(
-  state: S, action: A, instance: I
+export type EnhancedReducer<S, I = undefined> = (
+  state: S, action: Action, instance: I|undefined
 ) => Continuation<S, I>;
 
 

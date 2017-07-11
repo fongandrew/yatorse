@@ -13,15 +13,15 @@ const wrapReducer = <S>(reducer: Reducer<S>, config: FullConfig) =>
     let maxIterations = config.maxIterations;
     let iterCount = 0;
     while (Context.actions.length) {
-      let currentActions = Context.actions;
-      Context.actions = [];
-      state = currentActions.reduce<S>(reducer, state);
       if (++iterCount > maxIterations) {
         throw new Error(
           `Reducer iterations exceeds ${maxIterations} iterations. ` +
           `Set maxIterations config to change behavior.`
         );
       }
+      let currentActions = Context.actions;
+      Context.actions = [];
+      state = currentActions.reduce<S>(reducer, state);
     }
 
     return state;
@@ -120,6 +120,8 @@ const execEffects = <S>(
       } else if (ret) {
         callEffects.push(ret);
       }
+    } else {
+      callEffects.push(effect);
     }
   }
 
