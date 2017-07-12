@@ -30,6 +30,14 @@ export type EffectsFn = <S>(
   dispatch: Dispatch<S>
 ) => void|CallEffect|CallEffect[];
 
+export interface Update<S> {
+  // New state, same return value as normal Redux reducer
+  state: S;
+
+  // Effect functions to call after all actions have been reduced
+  effects?: (EffectsFn|CallEffect)[];
+}
+
 export interface Continuation<S> {
   // New state, same return value as normal Redux reducer
   state: S;
@@ -41,6 +49,7 @@ export interface Continuation<S> {
   effects?: EffectsFn|CallEffect|Array<EffectsFn|CallEffect>;
 }
 
+export type ReducerPlus<S> = (state: S, action: Action) => Update<S>;
 export type Loop<S> = (state: S, action: Action) => Continuation<S>;
 
 
@@ -49,11 +58,6 @@ export type Loop<S> = (state: S, action: Action) => Continuation<S>;
   actions.
 */
 export interface ContextType {
-  /*
-    Track how many action reductions have run. Supports maxIterations config.
-  */
-  iteration: number;
-
   /*
     Track continuation actions
   */

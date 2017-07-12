@@ -1,5 +1,6 @@
 export { default as call } from "./call";
 export { default as wrap } from "./wrap";
+export { unwrap, unwrapAll } from "./unwrap";
 export {
   CallEffect,
   CallEffectFn,
