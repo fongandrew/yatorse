@@ -63,7 +63,7 @@ describe("Continuation actions", () => {
     });
   });
 
-  it("can pass instance information between different invocations of the " +
+  it("can pass use instance count between different invocations of the " +
      "same reducer in the same loop",
   () => {
     interface Action {
@@ -71,36 +71,33 @@ describe("Continuation actions", () => {
       value: number;
     }
 
-    // Count up to the given value, using instance to track progress
-    const upReducer = wrap((
+    // Count down from the given value, using instance to track progress
+    const downReducer = wrap((
       state: number[]|undefined,
       action: Action,
-      instance?: number
+      count: number
     ) => {
       state = state || [];
       if (action.type === "COUNT") {
-        instance = typeof instance === "number" ? instance : 1;
+        let value = action.value - count;
         return {
-          state: state.concat([instance]),
-          actions: instance >= action.value ? [] : [action],
-          instance: instance + 1
+          state: state.concat([value]),
+          actions: value > 1 ? [action] : []
         };
       }
       return { state };
     });
 
-    // Count down from the given value, using instance to track progress
-    const downReducer = wrap((
+    // Count up to the given value, using instance count to track progress
+    const upReducer = wrap((
       state: number[]|undefined,
       action: Action,
-      instance?: number
+      count: number
     ) => {
       state = state || [];
       if (action.type === "COUNT") {
-        instance = typeof instance === "number" ? instance : action.value;
         return {
-          state: state.concat([instance]),
-          instance: instance - 1
+          state: state.concat([count + 1])
         };
       }
       return { state };
@@ -117,7 +114,7 @@ describe("Continuation actions", () => {
       down: [3, 2, 1]
     });
 
-    // Run again to check that instance resets
+    // Run again to check that count resets
     store.dispatch({ type: "COUNT", value: 3 });
     expect(store.getState()).to.deep.equal({
       up: [1, 2, 3, 1, 2, 3],

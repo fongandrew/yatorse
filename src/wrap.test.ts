@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import * as Sinon from "sinon";
 import call from "./call";
 import { default as Context, reset } from "./context";
 import wrap from "./wrap";
@@ -104,28 +105,33 @@ describe("wrap", () => {
     });
   });
 
-  describe("with instance", () => {
-    const reducer = (state: State, action: IncrAction, instance = 0) => ({
-      state: { count: state.count + action.val + (instance || 0) },
-      instance: (instance || 0) + 10
+  describe("with instance count", () => {
+    const reducer = (state: State, action: IncrAction, count = 0) => ({
+      state: { count: state.count + action.val + (count || 0) }
     });
     const action = { type: "INCR", val: 1 };
 
-    it("updates instance value on each subsequent call", () => {
-      let wrapped = wrap(reducer);
+    it("updates count on each subsequent call", () => {
+      let spy = Sinon.spy(reducer);
+      let wrapped = wrap(spy);
+
       let state = wrapped(initState, action);
-      expect(wrapped(state, action)).to.deep.equal({
-        count: 12 // 10 from instance, 2 from actions
-      });
+      Sinon.assert.calledWith(spy, initState, action, 0);
+
+      wrapped(state, action);
+      Sinon.assert.calledWith(spy, state, action, 1);
     });
 
     it("resets instance if Context.iteration advances", () => {
-      let wrapped = wrap(reducer);
+      let spy = Sinon.spy(reducer);
+      let wrapped = wrap(spy);
+
       let state = wrapped(initState, action);
+      Sinon.assert.calledWith(spy, initState, action, 0);
+
       Context.iteration++;
-      expect(wrapped(state, action)).to.deep.equal({
-        count: 2
-      });
+      wrapped(state, action);
+      Sinon.assert.calledWith(spy, state, action, 0);
     });
   });
 });

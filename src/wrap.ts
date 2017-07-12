@@ -6,9 +6,17 @@ import { Loop } from "./types";
   Wrapper that takes an enhanced reducer function and returns a normal
   state-only reducer. Used to ensure compatability with standard Redux.
 */
-const wrap = <S, I = undefined>(r: Loop<S, I>): Reducer<S> => {
-  let lastInstance: I|undefined;
+const wrap = <S>(r: Loop<S>): Reducer<S> => {
+  /*
+    Iteration = how many times has dispatch been called?
+  */
   let lastIteration: number|undefined;
+
+  /*
+    Instance = How many times has this particular reducer been run during
+    this iteration?
+  */
+  let lastInstance = 0;
 
   return (currentState: S, action: Action) => {
     /*
@@ -18,18 +26,17 @@ const wrap = <S, I = undefined>(r: Loop<S, I>): Reducer<S> => {
     */
     if (Context.iteration !== lastIteration) {
       lastIteration = Context.iteration;
-      lastInstance = undefined;
+      lastInstance = 0;
     }
 
     let {
       actions,
       effects,
-      instance,
       state
     } = r(currentState, action, lastInstance); // Run original reducer
 
     // Update instance for next run
-    lastInstance = instance;
+    lastInstance++;
 
     // Track actions to dispatch next
     if (actions instanceof Array) {

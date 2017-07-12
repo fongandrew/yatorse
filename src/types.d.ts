@@ -30,7 +30,7 @@ export type EffectsFn = <S>(
   dispatch: Dispatch<S>
 ) => void|CallEffect|CallEffect[];
 
-export interface Continuation<S, I = undefined> {
+export interface Continuation<S> {
   // New state, same return value as normal Redux reducer
   state: S;
 
@@ -39,17 +39,11 @@ export interface Continuation<S, I = undefined> {
 
   // Effect functions to call after all actions have been reduced
   effects?: EffectsFn|CallEffect|CallEffect[];
-
-  /*
-    New instance state. Instance state is used to pass variables in
-    between a state
-  */
-  instance?: I;
 }
 
-export type Loop<S, I = undefined> = (
-  state: S, action: Action, instance: I|undefined
-) => Continuation<S, I>;
+export type Loop<S> = (
+  state: S, action: Action, count: number
+) => Continuation<S>;
 
 
 /*
