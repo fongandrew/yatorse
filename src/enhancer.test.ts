@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import * as Sinon from "sinon";
-import { createStore, combineReducers } from "redux";
+import { createStore } from "redux";
 import call from "./call";
 import enhancerFactory from "./enhancer";
 import wrap from "./wrap";
@@ -60,65 +60,6 @@ describe("Continuation actions", () => {
       countA: 1,
       countB: 2,
       countC: 4
-    });
-  });
-
-  it("can pass use instance count between different invocations of the " +
-     "same reducer in the same loop",
-  () => {
-    interface Action {
-      type: "COUNT";
-      value: number;
-    }
-
-    // Count down from the given value, using instance to track progress
-    const downReducer = wrap((
-      state: number[]|undefined,
-      action: Action,
-      count: number
-    ) => {
-      state = state || [];
-      if (action.type === "COUNT") {
-        let value = action.value - count;
-        return {
-          state: state.concat([value]),
-          actions: value > 1 ? [action] : []
-        };
-      }
-      return { state };
-    });
-
-    // Count up to the given value, using instance count to track progress
-    const upReducer = wrap((
-      state: number[]|undefined,
-      action: Action,
-      count: number
-    ) => {
-      state = state || [];
-      if (action.type === "COUNT") {
-        return {
-          state: state.concat([count + 1])
-        };
-      }
-      return { state };
-    });
-
-    let store = createStore(combineReducers({
-      up: upReducer,
-      down: downReducer
-    }), enhancerFactory());
-
-    store.dispatch({ type: "COUNT", value: 3 });
-    expect(store.getState()).to.deep.equal({
-      up: [1, 2, 3],
-      down: [3, 2, 1]
-    });
-
-    // Run again to check that count resets
-    store.dispatch({ type: "COUNT", value: 3 });
-    expect(store.getState()).to.deep.equal({
-      up: [1, 2, 3, 1, 2, 3],
-      down: [3, 2, 1, 3, 2, 1]
     });
   });
 

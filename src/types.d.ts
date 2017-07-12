@@ -38,12 +38,10 @@ export interface Continuation<S> {
   actions?: Action|Action[];
 
   // Effect functions to call after all actions have been reduced
-  effects?: EffectsFn|CallEffect|CallEffect[];
+  effects?: EffectsFn|CallEffect|Array<EffectsFn|CallEffect>;
 }
 
-export type Loop<S> = (
-  state: S, action: Action, count: number
-) => Continuation<S>;
+export type Loop<S> = (state: S, action: Action) => Continuation<S>;
 
 
 /*
@@ -52,8 +50,7 @@ export type Loop<S> = (
 */
 export interface ContextType {
   /*
-    Track how many action reductions have run. Main purpose is help reducers
-    track if they've alrady been run during a given reduction.
+    Track how many action reductions have run. Supports maxIterations config.
   */
   iteration: number;
 

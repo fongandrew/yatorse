@@ -7,36 +7,12 @@ import { Loop } from "./types";
   state-only reducer. Used to ensure compatability with standard Redux.
 */
 const wrap = <S>(r: Loop<S>): Reducer<S> => {
-  /*
-    Iteration = how many times has dispatch been called?
-  */
-  let lastIteration: number|undefined;
-
-  /*
-    Instance = How many times has this particular reducer been run during
-    this iteration?
-  */
-  let lastInstance = 0;
-
   return (currentState: S, action: Action) => {
-    /*
-      New iteration => reset instance values. Instance var is intended only
-      to be shared between multiple runs of same reducer responding to
-      the same initial action.
-    */
-    if (Context.iteration !== lastIteration) {
-      lastIteration = Context.iteration;
-      lastInstance = 0;
-    }
-
     let {
       actions,
       effects,
       state
-    } = r(currentState, action, lastInstance); // Run original reducer
-
-    // Update instance for next run
-    lastInstance++;
+    } = r(currentState, action); // Run original reducer
 
     // Track actions to dispatch next
     if (actions instanceof Array) {
