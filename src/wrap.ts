@@ -1,12 +1,12 @@
 import { Action, Reducer } from "redux";
 import Context from "./context";
-import { EnhancedReducer } from "./types";
+import { Loop } from "./types";
 
 /*
   Wrapper that takes an enhanced reducer function and returns a normal
   state-only reducer. Used to ensure compatability with standard Redux.
 */
-const wrap = <S, I = undefined>(r: EnhancedReducer<S, I>): Reducer<S> => {
+const wrap = <S, I = undefined>(r: Loop<S, I>): Reducer<S> => {
   let lastInstance: I|undefined;
   let lastIteration: number|undefined;
 

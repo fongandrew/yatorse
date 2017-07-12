@@ -7,7 +7,7 @@ export {
   Config,
   Continuation,
   EffectsFn,
-  EnhancedReducer
+  Loop
 } from "./types";
 
 import enhancerFactory from "./enhancer";
