@@ -15,19 +15,13 @@ const wrap = <S>(r: Loop<S>): Reducer<S> => {
     } = r(currentState, action); // Run original reducer
 
     // Track actions to dispatch next
-    if (actions instanceof Array) {
+    if (actions) {
       Context.actions = Context.actions.concat(actions);
-    } else if (actions) {
-      Context.actions.push(actions);
     }
 
     // Track effects only if effects list in Context is not undefined
-    if (Context.effects && effects) {
-      if (effects instanceof Array) {
-        Context.effects = Context.effects.concat(effects);
-      } else {
-        Context.effects.push(effects);
-      }
+    if (effects) {
+      Context.effects = Context.effects.concat(effects);
     }
 
     return state;

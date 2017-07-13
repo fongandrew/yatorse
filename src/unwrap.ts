@@ -4,11 +4,11 @@
 
 import { Action, Reducer } from "redux";
 import Context from "./context";
-import { CallEffect, EffectsFn, Loop, ReducerPlus } from "./types";
+import { CallEffect, Loop, ReducerPlus } from "./types";
 
 /*
   Returns a Loop function (state + action => continuation) from a reducer.
-  noIterate
+
 */
 export const unwrap = <S>(reducer: Reducer<S>): Loop<S> => {
   return (state: S, action: Action) => {
@@ -33,7 +33,7 @@ export const unwrapAll = <S>(reducer: Reducer<S>, opts: {
 } = {}): ReducerPlus<S> => {
   return (state: S, action: Action) => {
     let actions = [action];
-    let effects: Array<CallEffect|EffectsFn> = [];
+    let effects: CallEffect[] = [];
     let iterCount = 0;
     let maxIterations = opts.maxIterations || 15;
     while (actions.length) {
@@ -47,19 +47,12 @@ export const unwrapAll = <S>(reducer: Reducer<S>, opts: {
       let newActions: Action[] = [];
       actions.forEach((action) => {
         let continuation = unwrap(reducer)(state, action);
-
-        if (continuation.actions instanceof Array) {
+        if (continuation.actions) {
           newActions = newActions.concat(continuation.actions);
-        } else if (continuation.actions) {
-          newActions.push(continuation.actions);
         }
-
-        if (continuation.effects instanceof Array) {
+        if (continuation.effects) {
           effects = effects.concat(continuation.effects);
-        } else if (continuation.effects) {
-          effects.push(continuation.effects);
         }
-
         state = continuation.state;
       });
       actions = newActions;

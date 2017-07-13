@@ -26,27 +26,17 @@ export type CallEffectNamedFn<C extends {[P in Name]: Function},
   Types for enhanced reducers.
 */
 
-export type EffectsFn = <S>(
-  dispatch: Dispatch<S>
-) => void|CallEffect|CallEffect[];
-
 export interface Update<S> {
   // New state, same return value as normal Redux reducer
   state: S;
 
   // Effect functions to call after all actions have been reduced
-  effects?: (EffectsFn|CallEffect)[];
+  effects?: CallEffect[];
 }
 
-export interface Continuation<S> {
-  // New state, same return value as normal Redux reducer
-  state: S;
-
+export interface Continuation<S> extends Update<S> {
   // Follow-on action(s) triggered by this action
-  actions?: Action|Action[];
-
-  // Effect functions to call after all actions have been reduced
-  effects?: EffectsFn|CallEffect|Array<EffectsFn|CallEffect>;
+  actions?: Action[];
 }
 
 export type ReducerPlus<S> = (state: S, action: Action) => Update<S>;
@@ -59,16 +49,20 @@ export type Loop<S> = (state: S, action: Action) => Continuation<S>;
 */
 export interface ContextType {
   /*
-    Track continuation actions
+    Track continuation actions returned by loops
   */
   actions: Action[];
 
   /*
     Track how many effects have been returned by enhanced reducers so far.
-    Set to undefined to indicate that effects should not be tracked (i.e.
-    if we're replaying action log using Redux dev tools)
   */
-  effects?: (EffectsFn|CallEffect)[];
+  effects: CallEffect[];
+
+  /*
+    The dispatch function to use when processing effects. Should be set prior
+    to processing call effects.
+  */
+  dispatch?: Dispatch<any>;
 }
 
 

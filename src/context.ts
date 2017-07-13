@@ -6,15 +6,13 @@ import { ContextType } from "./types";
 
 // Actual context object
 const Context: ContextType = {
-  iteration: 0,
-  actions: []
+  actions: [],
+  effects: []
 };
 
 export function reset() {
-  for (let key in Context) {
-    delete (Context as any)[key];
-  }
-  Context.iteration = 0;
+  delete Context.dispatch;
+  Context.effects = [];
   Context.actions = [];
 }
 

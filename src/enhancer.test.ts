@@ -3,6 +3,7 @@ import * as Sinon from "sinon";
 import { createStore } from "redux";
 import call from "./call";
 import enhancerFactory from "./enhancer";
+import { dispatch } from "./placeholders";
 import wrap from "./wrap";
 
 describe("Continuation actions", () => {
@@ -146,7 +147,7 @@ describe("Continuation effect", () => {
         case "A":
           return {
             state,
-            effects: (dispatch) => [
+            effects: [
               call(dispatch, { type: "B"}),
               call(aResolve, action)
             ]
@@ -154,7 +155,7 @@ describe("Continuation effect", () => {
         case "B":
           return {
             state,
-            effects: (dispatch) => [
+            effects: [
               call(dispatch, { type: "C"}),
               call(bResolve, action)
             ]
@@ -162,7 +163,9 @@ describe("Continuation effect", () => {
         case "C":
           return {
             state,
-            effects: call(cResolve, action)
+            effects: [
+              call(cResolve, action)
+            ]
           };
       }
       return { state };
@@ -206,7 +209,7 @@ describe("Continuation effect", () => {
         case "A":
           return {
             state,
-            effects: (dispatch) => [
+            effects: [
               call(dispatch, { type: "B"}),
               call(aResolve, action)
             ]
@@ -214,7 +217,7 @@ describe("Continuation effect", () => {
         case "B":
           return {
             state,
-            effects: (dispatch) => [
+            effects: [
               call(dispatch, { type: "C"}),
               call(bResolve, action)
             ]
@@ -260,7 +263,7 @@ describe("Continuation effect", () => {
         case "A":
           return {
             state,
-            effects: (dispatch) => [
+            effects: [
               call(dispatch, { type: "B"}),
               call(aResolve, action)
             ]
@@ -268,7 +271,7 @@ describe("Continuation effect", () => {
         case "B":
           return {
             state,
-            effects: (dispatch) => [
+            effects: [
               call(dispatch, { type: "C"}),
               call(bResolve, action)
             ]
