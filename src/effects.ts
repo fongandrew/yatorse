@@ -100,7 +100,7 @@ export const call: EffectFactory<Effect> = (
 */
 export const runWith = <S>(dispatch: Dispatch<S>) => {
   if (typeof dispatch !== "function") {
-    throw new Error("runWith requires a dispatch function.")
+    throw new Error("runWith requires a dispatch function.");
   }
   return (effect: Effect) => {
     Context.dispatch = dispatch;
@@ -111,5 +111,5 @@ export const runWith = <S>(dispatch: Dispatch<S>) => {
     finally {
       delete Context.dispatch;
     }
-  }
+  };
 };
