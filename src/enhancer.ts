@@ -1,7 +1,9 @@
 import { Action, Dispatch, GenericStoreEnhancer, Reducer, Store } from "redux";
 import Context from "./context";
+import { runWith } from "./effects";
 import { Effect, Config, FullConfig } from "./types";
 import { unwrapAll } from "./unwrap";
+
 
 // Higher order reducer that uses context to track continuation actions
 const wrapReducer = <S>(reducer: Reducer<S>, config: FullConfig) =>
@@ -98,7 +100,7 @@ const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
 
 
 /*
-  Helper function to run next frame across different environments.
+  Helper function to With next frame across different environments.
 */
 const nextTick = (fn: Function) => {
   if (typeof setImmediate !== "undefined") {
@@ -121,16 +123,9 @@ const execEffects = <S>(
   effects: Effect[],
   dispatch: Dispatch<S>
 ) => {
-  Context.dispatch = dispatch;
-  try {
-    // Run declarative call effects
-    for (let i in effects) {
-      let { fn, args, context } = effects[i];
-      fn.apply(context, args);
-    }
-  }
-  finally {
-    delete Context.dispatch;
+  let run = runWith(dispatch);
+  for (let i in effects) {
+    run(effects[i]);
   }
 };
 

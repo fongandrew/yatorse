@@ -1,3 +1,5 @@
+import { Dispatch } from "redux";
+import Context from "./context";
 import { Effect, EffectFn, EffectNamedFn } from "./types";
 
 /*
@@ -90,4 +92,24 @@ export const call: EffectFactory<Effect> = (
     throw new Error("No function provided.");
   }
   return { context, fn, args };
+};
+
+/*
+  Factory function for a funciton that runs a declarative effect.
+  Takes a dispatch function to replace the placeholder dispatch with.
+*/
+export const runWith = <S>(dispatch: Dispatch<S>) => {
+  if (typeof dispatch !== "function") {
+    throw new Error("runWith requires a dispatch function.")
+  }
+  return (effect: Effect) => {
+    Context.dispatch = dispatch;
+    try {
+      let { fn, args, context } = effect;
+      fn.apply(context, args);
+    }
+    finally {
+      delete Context.dispatch;
+    }
+  }
 };

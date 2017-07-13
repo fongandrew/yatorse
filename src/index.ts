@@ -1,4 +1,4 @@
-export { call } from "./effects";
+export { call, runWith } from "./effects";
 export { dispatch } from "./placeholders";
 export {
   Effect,
