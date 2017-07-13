@@ -84,7 +84,7 @@ const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
       ...fingerprint
     });
 
-    if (! config.disableSideEffects) {
+    if (! config.disableEffects) {
       nextTick(() => execEffects(
         effects || [],
         effectsDispatch as Dispatch<S>
@@ -147,7 +147,7 @@ const idFn = (() => {
 // See Config type for details.
 const DEFAULT_CONFIG: FullConfig = {
   maxIterations: 15,
-  disableSideEffects: false,
+  disableEffects: false,
   fingerprinting: true,
   idKey: "__id",
   originKey: "__origin",

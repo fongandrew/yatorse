@@ -78,7 +78,7 @@ export interface FullConfig {
     Disable side effects running during dispatch. May want to do this when
     testing or in some other context where running effect code isn't desired.
   */
-  disableSideEffects: boolean;
+  disableEffects: boolean;
 
   /*
     Effects may include dispatching other actions in the future. To help
