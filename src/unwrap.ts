@@ -4,7 +4,7 @@
 
 import { Action, Reducer } from "redux";
 import Context from "./context";
-import { CallEffect, Loop, ReducerPlus } from "./types";
+import { Effect, Loop, ReducerPlus } from "./types";
 
 /*
   Returns a Loop function (state + action => continuation) from a reducer.
@@ -33,7 +33,7 @@ export const unwrapAll = <S>(reducer: Reducer<S>, opts: {
 } = {}): ReducerPlus<S> => {
   return (state: S, action: Action) => {
     let actions = [action];
-    let effects: CallEffect[] = [];
+    let effects: Effect[] = [];
     let iterCount = 0;
     let maxIterations = opts.maxIterations || 15;
     while (actions.length) {

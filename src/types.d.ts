@@ -8,16 +8,16 @@ import { Action, Dispatch, Reducer } from "redux";
   redux-saga does this.
 */
 
-export interface CallEffect {
+export interface Effect {
   context: any;
   fn: Function;
   args: any[];
 }
 
-export type CallEffectFn<F extends Function> =
+export type EffectFn<F extends Function> =
   F | [any, F] | {context: any, fn: F};
 
-export type CallEffectNamedFn<C extends {[P in Name]: Function},
+export type EffectNamedFn<C extends {[P in Name]: Function},
                               Name extends string> =
   [C, Name] | {context: C, fn: Name};
 
@@ -31,7 +31,7 @@ export interface Update<S> {
   state: S;
 
   // Effect functions to call after all actions have been reduced
-  effects?: CallEffect[];
+  effects?: Effect[];
 }
 
 export interface Continuation<S> extends Update<S> {
@@ -56,7 +56,7 @@ export interface ContextType {
   /*
     Track how many effects have been returned by enhanced reducers so far.
   */
-  effects: CallEffect[];
+  effects: Effect[];
 
   /*
     The dispatch function to use when processing effects. Should be set prior

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import * as Sinon from "sinon";
 import { createStore } from "redux";
-import call from "./call";
+import { call } from "./effects";
 import enhancerFactory from "./enhancer";
 import { dispatch } from "./placeholders";
 import wrap from "./wrap";

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import call from "./call";
+import { call } from "./effects";
 
 describe("call", () => {
   it("returns declarative object representing function call", () => {

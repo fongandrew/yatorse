@@ -1,9 +1,9 @@
-export { default as call } from "./call";
+export { call } from "./effects";
 export { dispatch } from "./placeholders";
 export {
-  CallEffect,
-  CallEffectFn,
-  CallEffectNamedFn,
+  Effect,
+  EffectFn,
+  EffectNamedFn,
   Config,
   Continuation,
   Loop

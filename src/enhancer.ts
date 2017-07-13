@@ -1,6 +1,6 @@
 import { Action, Dispatch, GenericStoreEnhancer, Reducer, Store } from "redux";
 import Context from "./context";
-import { CallEffect, Config, FullConfig } from "./types";
+import { Effect, Config, FullConfig } from "./types";
 import { unwrapAll } from "./unwrap";
 
 // Higher order reducer that uses context to track continuation actions
@@ -118,7 +118,7 @@ declare var process: any; // For process.nextTick call above
 
 // Execute callback effect functions
 const execEffects = <S>(
-  effects: CallEffect[],
+  effects: Effect[],
   dispatch: Dispatch<S>
 ) => {
   Context.dispatch = dispatch;
