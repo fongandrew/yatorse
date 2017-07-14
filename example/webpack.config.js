@@ -28,6 +28,10 @@ var config = {
 
   resolve: {
     extensions: ["*", ".js", ".jsx"],
+    alias: {
+      // Point to parent directory
+      yatorse: path.join(__dirname, "..", "lib", "index.js")
+    }
   },
 
   module: {
