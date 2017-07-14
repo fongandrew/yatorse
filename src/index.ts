@@ -1,5 +1,4 @@
-export { call, runWith } from "./effects";
-export { dispatch } from "./placeholders";
+export { call } from "./effects";
 export {
   Effect,
   EffectFn,
@@ -8,8 +7,7 @@ export {
   Continuation,
   Loop
 } from "./types";
-export { unwrap, unwrapAll } from "./unwrap";
-export { default as wrap } from "./wrap";
+export { wrap, unwrap, unwrapAll } from "./wrap";
 
 import enhancerFactory from "./enhancer";
 export default enhancerFactory;

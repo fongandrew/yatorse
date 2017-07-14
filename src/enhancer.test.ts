@@ -3,7 +3,7 @@ import * as Sinon from "sinon";
 import { createStore } from "redux";
 import { call } from "./effects";
 import enhancerFactory from "./enhancer";
-import wrap from "./wrap";
+import { wrap } from "./wrap";
 
 describe("Continuation actions", () => {
   it("can trigger multiple reducers within the same dispatch", () => {

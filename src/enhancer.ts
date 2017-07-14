@@ -1,26 +1,32 @@
 import { Action, Dispatch, GenericStoreEnhancer, Reducer, Store } from "redux";
-import Context from "./context";
 import { Effect, Config, FullConfig } from "./types";
-import { unwrapAll } from "./unwrap";
+import { unwrapAll } from "./wrap";
 
 
-let nextDispatch: Dispatch<any>|undefined;
+/*
+  Context object to pass effects and dispatch function between reducer and
+  dispatch scopes. Used only in this module, but export to allow debugging.
+*/
+export const Context = {
+  dispatch: undefined as Dispatch<any>|undefined,
+  effects: [] as Effect[]
+};
+
 
 // Higher order reducer that uses context to track continuation actions
 const wrapReducer = <S>(reducer: Reducer<S>, config: FullConfig) =>
   (state: S, action: Action) => {
-    let update = unwrapAll(reducer, config)(state, action, nextDispatch);
+    let update = unwrapAll(reducer, config)(state, action, Context.dispatch);
     Context.effects = update.effects || [];
     return update.state;
   };
 
 
-// Middleware, dispatch wrapper to handle effects. Unlike
+// Middleware, dispatch wrapper to handle effects.
 const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
   let wrappedDispatch: Dispatch<S> = <A extends Action>(action: A): A => {
-    let ret: A;
-    let effects: typeof Context.effects;
-    nextDispatch = wrappedDispatch;
+    // Set the dispatch function used by reducer
+    Context.dispatch = wrappedDispatch;
 
     // Fingerprint action, determine origin if any
     if (config.fingerprinting) {
@@ -66,25 +72,26 @@ const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
           }
         };
       }
-      nextDispatch = (action: Action) => wrappedDispatch({
+      Context.dispatch = (action: Action) => wrappedDispatch({
         ...(action as Action),
         ...nextFingerprint
       });
     }
 
+    let ret: A;
     try {
       ret = dispatch(action);
-      effects = Context.effects;
     } finally {
       /*
-        Always unset dispatch so any subsequent reductions outside of dispatch
-        don't trigger side effects.
+        Always unset Context.dispatch so any subsequent runs of reducer
+        outside of this dispatch function don't trigger side effects.
       */
-      nextDispatch = undefined;
+      Context.dispatch = undefined;
     }
 
+    // Schedule effects for after reducer completion.
     if (! config.disableEffects) {
-      nextTick(() => execEffects(effects || []));
+      nextTick(() => execEffects(Context.effects));
     }
 
     // Return original return value from wrapped dispatch call.

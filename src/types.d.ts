@@ -44,29 +44,6 @@ export type Loop<S> = (
 ) => Partial<Continuation<S>>;
 
 
-/*
-  Type for a global context object we use track effects and continuation
-  actions.
-*/
-export interface ContextType {
-  /*
-    Track continuation actions returned by loops
-  */
-  actions: Action[];
-
-  /*
-    Track how many effects have been returned by enhanced reducers so far.
-  */
-  effects: Effect[];
-
-  /*
-    The dispatch function to use when processing effects. Should be set prior
-    to reducing.
-  */
-  dispatch?: Dispatch<any>;
-}
-
-
 // Configuration for enhancer
 export interface FullConfig {
   /*
