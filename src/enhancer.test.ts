@@ -3,7 +3,6 @@ import * as Sinon from "sinon";
 import { createStore } from "redux";
 import { call } from "./effects";
 import enhancerFactory from "./enhancer";
-import { dispatch } from "./placeholders";
 import wrap from "./wrap";
 
 describe("Continuation actions", () => {
@@ -142,7 +141,7 @@ describe("Continuation effect", () => {
     let cResolve: (x: any) => any;
     let cPromise = new Promise((resolve) => cResolve = resolve);
 
-    const reducer = wrap((state = {}, action: { type: string }) => {
+    const reducer = wrap((state = {}, action: { type: string }, dispatch) => {
       switch (action.type) {
         case "A":
           return {
@@ -204,7 +203,7 @@ describe("Continuation effect", () => {
     let bResolve: (x: any) => any;
     let bPromise = new Promise((resolve) => bResolve = resolve);
 
-    const reducer = wrap((state = {}, action: { type: string }) => {
+    const reducer = wrap((state = {}, action: { type: string }, dispatch) => {
       switch (action.type) {
         case "A":
           return {
@@ -258,7 +257,7 @@ describe("Continuation effect", () => {
     let bResolve: (x: any) => any;
     let bPromise = new Promise((resolve) => bResolve = resolve);
 
-    const reducer = wrap((state = {}, action: { type: string }) => {
+    const reducer = wrap((state = {}, action: { type: string }, dispatch) => {
       switch (action.type) {
         case "A":
           return {

@@ -26,21 +26,22 @@ export type EffectNamedFn<C extends {[P in Name]: Function},
   Types for enhanced reducers.
 */
 
+// Effects extracted while recalling
 export interface Update<S> {
-  // New state, same return value as normal Redux reducer
   state: S;
-
-  // Effect functions to call after all actions have been reduced
-  effects?: Effect[];
+  effects: Effect[];
 }
 
+// Effects + actions extracted while recalling
 export interface Continuation<S> extends Update<S> {
-  // Follow-on action(s) triggered by this action
-  actions?: Action[];
+  actions: Action[];
 }
 
-export type ReducerPlus<S> = (state: S, action: Action) => Update<S>;
-export type Loop<S> = (state: S, action: Action) => Continuation<S>;
+export type Loop<S> = (
+  state: S,
+  action: Action,
+  dispatch: Dispatch<S>
+) => Partial<Continuation<S>>;
 
 
 /*
@@ -60,7 +61,7 @@ export interface ContextType {
 
   /*
     The dispatch function to use when processing effects. Should be set prior
-    to processing call effects.
+    to reducing.
   */
   dispatch?: Dispatch<any>;
 }

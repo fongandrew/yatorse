@@ -1,14 +1,15 @@
 import { Action, Dispatch, GenericStoreEnhancer, Reducer, Store } from "redux";
 import Context from "./context";
-import { runWith } from "./effects";
 import { Effect, Config, FullConfig } from "./types";
 import { unwrapAll } from "./unwrap";
 
 
+let nextDispatch: Dispatch<any>|undefined;
+
 // Higher order reducer that uses context to track continuation actions
 const wrapReducer = <S>(reducer: Reducer<S>, config: FullConfig) =>
   (state: S, action: Action) => {
-    let update = unwrapAll(reducer, config)(state, action);
+    let update = unwrapAll(reducer, config)(state, action, nextDispatch);
     Context.effects = update.effects || [];
     return update.state;
   };
@@ -17,18 +18,15 @@ const wrapReducer = <S>(reducer: Reducer<S>, config: FullConfig) =>
 // Middleware, dispatch wrapper to handle effects. Unlike
 const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
   let wrappedDispatch: Dispatch<S> = <A extends Action>(action: A): A => {
-    // Reset effect tracking
-    Context.effects = [];
     let ret: A;
     let effects: typeof Context.effects;
+    nextDispatch = wrappedDispatch;
 
     // Fingerprint action, determine origin if any
-    let id: string|undefined;
-    let origin: string|undefined;
     if (config.fingerprinting) {
-      id = config.idFn(action);
+      let id = config.idFn(action);
       let meta = (config.metaKey && (action as any)[config.metaKey]);
-      origin =
+      let origin =
         (meta && meta[config.originKey]) ||
         (action as any)[config.originKey] ||
         id;
@@ -46,10 +44,32 @@ const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
         };
       }
 
+      // Update the current action
       action = {
         ...(action as Action),
         ...fingerprint
       } as A;
+
+      /*
+        Wrap dispatch so it records origin and parent for actions dispatched
+        as effects of the current action.
+      */
+      let nextFingerprint: any = {
+        [config.parentKey]: id,
+        [config.originKey]: origin
+      };
+      if (config.metaKey) {
+        nextFingerprint = {
+          [config.metaKey]: {
+            ...((action as any)[config.metaKey] || {}),
+            ...nextFingerprint
+          }
+        };
+      }
+      nextDispatch = (action: Action) => wrappedDispatch({
+        ...(action as Action),
+        ...nextFingerprint
+      });
     }
 
     try {
@@ -57,38 +77,14 @@ const wrapDispatch = <S>(dispatch: Dispatch<S>, config: FullConfig) => {
       effects = Context.effects;
     } finally {
       /*
-        Always unset effects so any subsequent reductions outside of dispatch
+        Always unset dispatch so any subsequent reductions outside of dispatch
         don't trigger side effects.
       */
-      delete Context.effects;
+      nextDispatch = undefined;
     }
-
-    /*
-      Wrapped the dispatch function we give to function for processing
-      effects so it records origin.
-    */
-    let fingerprint: any = (id && origin) ? {
-      [config.parentKey]: id,
-      [config.originKey]: origin
-    } : {};
-    if (config.metaKey) {
-      fingerprint = {
-        [config.metaKey]: {
-          ...((action as any)[config.metaKey] || {}),
-          ...fingerprint
-        }
-      };
-    }
-    let effectsDispatch = (action: Action) => wrappedDispatch({
-      ...(action as Action),
-      ...fingerprint
-    });
 
     if (! config.disableEffects) {
-      nextTick(() => execEffects(
-        effects || [],
-        effectsDispatch as Dispatch<S>
-      ));
+      nextTick(() => execEffects(effects || []));
     }
 
     // Return original return value from wrapped dispatch call.
@@ -119,13 +115,10 @@ const nextTick = (fn: Function) => {
 declare var process: any; // For process.nextTick call above
 
 // Execute callback effect functions
-const execEffects = <S>(
-  effects: Effect[],
-  dispatch: Dispatch<S>
-) => {
-  let run = runWith(dispatch);
+const execEffects = (effects: Effect[]) => {
   for (let i in effects) {
-    run(effects[i]);
+    let { fn, context, args } = effects[i];
+    fn.apply(context, args);
   }
 };
 
