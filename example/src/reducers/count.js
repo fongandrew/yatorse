@@ -1,4 +1,4 @@
-import { call, dispatch, wrap } from "yatorse";
+import { call, wrap } from "yatorse";
 
 const INIT_STATE = {
   count: 0,
@@ -12,7 +12,7 @@ const INIT_STATE = {
     { type: "INCR", payload: number }
     { type: "STOP" }
 */
-const count = wrap((state = INIT_STATE, action) => {
+const count = wrap((state = INIT_STATE, action, dispatch) => {
   switch (action.type) {
     /*
       START action: If we're already counting, do nothing. Else, dispatch
@@ -37,7 +37,7 @@ const count = wrap((state = INIT_STATE, action) => {
       return state.counting ? {
         state: {
           ...state,
-          count: count + action.payload
+          count: state.count + action.payload
         },
         effects: [
           call(countAfterDelay,
