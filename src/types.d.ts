@@ -43,6 +43,23 @@ export type Loop<S> = (
   dispatch: Dispatch<S>
 ) => Partial<Continuation<S>>;
 
+/*
+  A debouncer is used to debounce multiple signals occurring within the same
+  synchronous loop.
+*/
+export interface Debouncer {
+  /*
+    Wrap function whose calls are to be debounced
+  */
+  debounce: (fn: () => void) => () => void;
+
+  /*
+    Flush allows for manually triggering any callbacks without waiting for
+    callbacks to occur on next tick. Functions wrapped by debounce are called
+    only if they received any previous calls in the last tick.
+  */
+  flush: () => void;
+}
 
 // Configuration for enhancer
 export interface FullConfig {
