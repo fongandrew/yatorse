@@ -2,8 +2,8 @@
   Set up getState / putState functions to pass to proc
 */
 
-import { Dispatch } from "redux";
-import { GetStateFn, PutStateFn, PutAction } from "./types";
+import { Action, Dispatch } from "redux";
+import { GetStateFn, PutStateFn, PutAction, PutActionConfig } from "./types";
 
 // Helper to iterate over key list and get or create objects as necessary
 const getKeyState = (state: any, args: string[]) => {
@@ -29,28 +29,30 @@ export const createGetState = <S>(storeGetState: () => S): GetStateFn<S> =>
   (...args: string[]) => getKeyState(storeGetState(), args);
 
 // Creates a key-array putState hook for procs
-export const createPutState =
-  <S>(dispatch: Dispatch<S>, getState: () => S): PutStateFn<S> =>
-  (...args: any[]) => {
-    if (args.length < 1) {
-      throw new Error("putState expects at least one arg");
-    }
+export const createPutState = <S>(
+  action: Action,
+  dispatch: Dispatch<S>,
+  getState: () => S,
+  conf: PutActionConfig
+): PutStateFn<S> => (...args: any[]) => {
+  if (args.length < 1) {
+    throw new Error("putState expects at least one arg");
+  }
 
-    let fn = args[args.length - 1];
-    if (typeof fn !== "function") {
-      throw new Error("Last arg to putState must be a function");
-    }
+  let fn = args[args.length - 1];
+  if (typeof fn !== "function") {
+    throw new Error("Last arg to putState must be a function");
+  }
 
-    let state = getState();
-    let keys = args.slice(0, -1);
-    let substate = getKeyState(state, keys);
-    let action: PutAction = {
-      type: "PUT",
-      payload: {
-        keys,
-        data: fn(substate)
-      },
-      __putAction: true
-    };
-    return dispatch(action);
+  let state = getState();
+  let keys = args.slice(0, -1);
+  let substate = getKeyState(state, keys);
+  let putAction: PutAction = {
+    type: typeof conf.type === "string" ? conf.type : conf.type(action),
+    payload: {
+      keys,
+      data: fn(substate)
+    }
   };
+  return dispatch(putAction);
+};

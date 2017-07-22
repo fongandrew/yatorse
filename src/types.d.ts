@@ -9,9 +9,6 @@ export interface PutAction {
     keys?: string[];
     data: any;
   };
-
-  // How we identify PutAction (since type may vary)
-  __putAction: true;
 }
 
 /*
@@ -105,6 +102,14 @@ export interface Proc<S> {
   (action: Action, hooks: Hooks<S>): Promise<void>|void;
 }
 
+/*
+  Config options for determining how to group together putActions
+*/
+export interface PutActionConfig {
+  type: string|((action: Action) => string);
+  test: (type: string) => boolean;
+};
+
 // Configuration for enhancer
 export interface FullConfig {
   /*
@@ -131,6 +136,12 @@ export interface FullConfig {
     Custom function for fingerprint generation
   */
   idFn: (action: Action) => string;
+
+  /*
+    Group put action conf under one key because setting type and determing
+    whether type is for a put action go together.
+  */
+  putActionConf: PutActionConfig;
 }
 
 // Opt object actually passed to enhancer

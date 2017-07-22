@@ -2,14 +2,15 @@
   Reducer for our putState action
 */
 import { Action } from "redux";
-import { PutAction } from "./types";
+import { PutAction, PutActionConfig } from "./types";
 
-export const isPutAction = (a: Action): a is PutAction => {
-  return (a as PutAction).__putAction === true;
-};
+export const isPutAction = (
+  a: Action, conf: PutActionConfig
+): a is PutAction => conf.test(a.type);
 
 /*
-  Recursive implementation of reducePut
+  Recursively replaces some path in state with data.
+  Creates nested objects as necessary to create path.
 */
 const reduceSubState = (state: any, keys: string[], data: any): any => {
   if (keys.length) {
@@ -24,15 +25,15 @@ const reduceSubState = (state: any, keys: string[], data: any): any => {
 };
 
 /*
-  Reduces PutActions. Uses array of strings as a path to some variable
-  we want to replace. Creates nested objects as necessary to create path.
-  Don't do anything to handle undefined (initial) state since we don't want
-  to override whatever the store creator is providing.
+  Creates a reducer for PutActions. Don't do anything to handle undefined
+  (initial) state since we don't want to override whatever the store creator
+  is providing.
 */
-export const reducePut = (state: any, action: Action) => {
-  if (isPutAction(action)) {
-    let { keys, data } = action.payload;
-    return reduceSubState(state, keys || [], data);
-  }
-  return state;
-};
+export const reducePutFactory = (conf: PutActionConfig) =>
+  <A extends Action>(state: any, action: A) => {
+    if (isPutAction(action, conf)) {
+      let { keys, data } = action.payload;
+      return reduceSubState(state, keys || [], data);
+    }
+    return state;
+  };

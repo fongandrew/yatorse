@@ -4,14 +4,15 @@ import {
 } from "redux";
 import { createDebouncer } from "./debouncer";
 import { getMeta, setMeta } from "./fingerprinting";
-import { reducePut } from "./reducers";
+import { reducePutFactory } from "./reducers";
 import { createGetState, createPutState } from "./state-managers";
 import { Debouncer, Config, FullConfig, Proc } from "./types";
 import { idFn } from "./utils";
 
 // Wrap reducer to handle putState actions -- putState runs first
-export const wrapReducer = <S>(reducer: Reducer<S>) =>
-  <A extends Action>(state: S, action: A) => {
+export const wrapReducer = <S>(reducer: Reducer<S>, conf: FullConfig) => {
+  const reducePut = reducePutFactory(conf.putActionConf);
+  return <A extends Action>(state: S, action: A) => {
     /*
       Important to run original reducer first so as to set initial state
       if necessary.
@@ -19,6 +20,7 @@ export const wrapReducer = <S>(reducer: Reducer<S>) =>
     state = reducer(state, action);
     return reducePut(state, action);
   };
+};
 
 // Wrap dispatch to call proc function
 export const wrapDispatch = <S>(next: Dispatch<S>, props: {
@@ -56,7 +58,7 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
     proc(action, {
       dispatch: wrappedDispatch,
       getState: createGetState(getState),
-      putState: createPutState(dispatch, getState)
+      putState: createPutState(action, dispatch, getState, conf.putActionConf)
     });
 
     return ret;
@@ -94,7 +96,18 @@ const DEFAULT_CONFIG: FullConfig = {
   idKey: "__id",
   originKey: "__origin",
   parentKey: "__parent",
-  idFn
+  idFn,
+
+  // Put action if it sends with /PUT
+  putActionConf: {
+    type: (action) => action.type + "/PUT",
+    test: (type) => {
+      // string.endsWith("/PUT") with legacy browser supports
+      const suffix = "/PUT";
+      const n = type.lastIndexOf(suffix);
+      return n >= 0 && n === type.length - suffix.length;
+    }
+  }
 };
 
 const enhancerFactory =
@@ -103,7 +116,7 @@ const enhancerFactory =
   (reducer: Reducer<S>, ...args: any[]) => {
     let fullConf = { ...DEFAULT_CONFIG, ...conf };
     let debouncer = createDebouncer();
-    let store = next(wrapReducer(reducer), ...args);
+    let store = next(wrapReducer(reducer, fullConf), ...args);
     let dispatch = wrapDispatch(store.dispatch, {
       proc,
       debouncer,
