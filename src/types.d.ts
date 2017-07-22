@@ -108,7 +108,7 @@ export interface Proc<S> {
 export interface PutActionConfig {
   type: string|((action: Action) => string);
   test: (type: string) => boolean;
-};
+}
 
 // Configuration for enhancer
 export interface FullConfig {
