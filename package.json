@@ -17,7 +17,7 @@
     "@types/sinon": "^2.3.2",
     "chai": "^4.0.2",
     "mocha": "^3.4.2",
-    "redux": "^3.7.1",
+    "redux": "^3.7.2",
     "sinon": "^2.3.7",
     "ts-node": "^3.1.0",
     "tslint": "^5.4.3",
@@ -27,7 +27,6 @@
     "tslib": "^1.7.1"
   },
   "peerDependencies": {
-    "react": "^15.6.1",
-    "redux": "^3.7.1"
+    "redux": "^3.7.2"
   }
 }
