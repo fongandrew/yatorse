@@ -1,13 +1,9 @@
-export { call } from "./effects";
 export {
-  Effect,
-  EffectFn,
-  EffectNamedFn,
   Config,
-  Continuation,
-  Loop
+  Hooks,
+  Proc,
+  PutAction
 } from "./types";
-export { wrap, unwrap, unwrapAll } from "./wrap";
 
 import enhancerFactory from "./enhancer";
 export default enhancerFactory;
