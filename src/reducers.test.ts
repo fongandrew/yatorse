@@ -1,5 +1,6 @@
 import { expect } from "chai";
-import { reducePut, PutAction } from "./reducers";
+import { reducePut } from "./reducers";
+import { PutAction } from "./types";
 
 const createAction = (keys: string[], data: any): PutAction => ({
   type: "DOESN'T MATTER",

@@ -1,293 +1,231 @@
 import { expect } from "chai";
 import * as Sinon from "sinon";
-import { createStore } from "redux";
-import { call } from "./effects";
+import { createStore, Action, Reducer } from "redux";
 import enhancerFactory from "./enhancer";
-import { wrap } from "./wrap";
 
-describe("Continuation actions", () => {
-  it("can trigger multiple reducers within the same dispatch", () => {
+// Do-nothing reducer for proc testing
+const noopReducer: Reducer<any> = (state = {}, action) => state;
+
+describe("Enhancer with proc function", () => {
+  it("does not interrupt normal Redux reducer flow", () => {
     interface State {
-      countA: number;
-      countB: number;
-      countC: number;
+      count: number;
     }
 
-    interface Action {
-      type: "A"|"B"|"C";
-      value: number;
-    }
-
-    /*
-      Reducer for testing continuation actions. A calls B twice. And each B
-      calls C twice. So B values should be 2x A, and C values should be 4x A.
-    */
-    const reducer = (state: State, action: Action) => {
-      let { type, value } = action;
-      switch (type) {
-        case "A":
-          return {
-            state: { ...state, countA: state.countA + value },
-            actions: [{ type: "B", value }, { type: "B", value }]
-          };
-        case "B":
-          return {
-            state: { ...state, countB: state.countB + value },
-            actions: [{ type: "C", value }, { type: "C", value }]
-          };
-        case "C":
-          return {
-            state: { ...state, countC: state.countC + value }
-          };
+    let reducer = <A extends Action>(state = { count: 0 }, action: A) => {
+      if (action.type === "INCR") {
+        return { ...state, count: state.count + 1 };
       }
-      return { state };
+      return state;
     };
 
-    const initState: State = {
-      countA: 0,
-      countB: 0,
-      countC: 0
-    };
+    let spy1 = Sinon.spy();
+    let spy2 = Sinon.spy();
+    let enhancer = enhancerFactory<State>((action) => spy1(action));
+    let store = createStore<State>(reducer, enhancer);
+    store.subscribe(spy2);
+    store.dispatch({ type: "INCR" });
 
-    let store = createStore(
-      wrap(reducer),
-      initState,
-      enhancerFactory()
-    );
-
-    store.dispatch({ type: "A", value: 1 });
-    expect(store.getState()).to.deep.equal({
-      countA: 1,
-      countB: 2,
-      countC: 4
-    });
+    Sinon.assert.calledWith(spy1, { type: "INCR" });
+    expect(store.getState()).to.deep.equal({ count: 1 });
+    Sinon.assert.calledOnce(spy2);
   });
 
-  it("throws an error if it runs more than maxIteration loops", () => {
+  it("can get state", () => {
+    interface State {
+      count: number;
+    }
+
+    let reducer = <A extends Action>(state = { count: 0 }, action: A) => {
+      if (action.type === "INCR") {
+        return { ...state, count: state.count + 1 };
+      }
+      return state;
+    };
+
     let spy = Sinon.spy();
-    let reducer = wrap((state: {}, action: { type: string }) => {
-      state = state || {};
-      if (action.type === "GO") {
-        spy();
-        return { state, actions: [action] };
-      }
-      return { state };
+    let enhancer = enhancerFactory<State>((action, { getState }) => {
+      spy(getState("count"));
     });
+    let store = createStore<State>(reducer, enhancer);
+    store.dispatch({ type: "INCR" });
 
-    let store = createStore(reducer, enhancerFactory({
-      maxIterations: 5
-    }));
-    expect(() => store.dispatch({ type: "GO" })).to.throw();
-    expect(spy.callCount).to.equal(5);
+    Sinon.assert.calledWith(spy, 1);
   });
-});
 
-describe("Continuation effect", () => {
-  it("gets executed after all actions processed", async () => {
-    // Deferrals so we know when effects called
-    let aSpy = Sinon.spy();
-    let aResolve: (x: any) => any;
-    let aPromise = new Promise((resolve) => aResolve = resolve);
-    let bSpy = Sinon.spy();
-    let bResolve: (x: any) => any;
-    let bPromise = new Promise((resolve) => bResolve = resolve);
+  it("can put state", () => {
+    interface State {
+      count: number;
+    }
 
-    type Action = { type: string; };
-    const reducer = wrap((state = { a: false, b: false }, action: Action) => {
+    let spy1 = Sinon.spy();
+    let spy2 = Sinon.spy();
+    let enhancer = enhancerFactory<State>((action, { getState, putState }) => {
+      if (action.type === "INCR") {
+        putState("count", (n = 0) => n + 1);
+      }
+      spy1(getState("count"));
+    });
+    let store = createStore<State>(noopReducer, enhancer);
+    store.subscribe(spy2);
+
+    store.dispatch({ type: "INCR" });
+    Sinon.assert.calledWith(spy1, 1);
+    Sinon.assert.calledOnce(spy2);
+
+    store.dispatch({ type: "INCR" });
+    Sinon.assert.calledWith(spy1, 2);
+    Sinon.assert.calledTwice(spy2);
+
+    expect(store.getState()).to.deep.equal({ count: 2 });
+  });
+
+  it("can put state asynchronously", async () => {
+    interface State {
+      count: number;
+    }
+
+    let spy = Sinon.spy();
+    let enhancer = enhancerFactory<State>(async (action, { putState }) => {
+      if (action.type === "INCR") {
+        await Promise.resolve();
+        putState("count", (n = 0) => n + 1);
+        putState("count", (n = 0) => n + 1);
+
+        await Promise.resolve();
+        putState("count", (n = 0) => n + 1);
+      }
+    });
+    let store = createStore<State>(noopReducer, enhancer);
+    store.subscribe(spy);
+
+    // Synchronous => immediate subscription update
+    store.dispatch({ type: "INCR" });
+    expect(store.getState()).to.deep.equal({});
+    Sinon.assert.calledOnce(spy);
+
+    // Async => Take a tick for async sub listeners to fire (necessary for
+    // debounce to work properly)
+    await Promise.resolve();
+    expect(store.getState()).to.deep.equal({ count: 2 });
+
+    await Promise.resolve();
+    Sinon.assert.calledTwice(spy);
+    expect(store.getState()).to.deep.equal({ count: 3 });
+
+    await Promise.resolve();
+    Sinon.assert.calledThrice(spy);
+
+    // Wait another tick and check again that only called once per async
+    await Promise.resolve();
+    Sinon.assert.calledThrice(spy);
+  });
+
+  it("can dispatch other actions", async () => {
+    interface State {
+      a: number;
+      b: number;
+      c: number;
+    }
+
+    const initState: State = { a: 0, b: 0, c: 0 };
+    let reducer = <A extends Action>(state = initState, action: A) => {
       switch (action.type) {
         case "A":
-          return {
-            state: { ...state, a: true },
-            actions: [{ type: "B" }],
-            effects: [
-              call(aSpy),
-              call(aResolve, action)
-            ]
-          };
+          return { ...state, a: state.a + 1 };
         case "B":
-          return {
-            state: { ...state, b: true },
-            effects: [
-              call(bSpy),
-              call(bResolve, action)
-            ]
-          };
+          return { ...state, b: state.b + 1 };
+        case "C":
+          return { ...state, c: state.c + 1 };
       }
-      return { state };
+      return state;
+    };
+
+    let enhancer = enhancerFactory<State>((action, { dispatch }) => {
+      switch(action.type) {
+        case "A":
+          dispatch({ type: "B" });
+          break;
+        case "B":
+          dispatch({ type: "C" });
+          break;
+      }
     });
-    let store = createStore(reducer, enhancerFactory());
+    let store = createStore<State>(reducer, enhancer);
+    let spy = Sinon.spy();
+    store.subscribe(spy);
+    store.dispatch({ type: "A" });
+
+    // A triggers B which triggers C, all synchronously here.
+    expect(store.getState()).to.deep.equal({ a: 1, b: 1, c: 1 });
+    Sinon.assert.calledOnce(spy);
+
+    // Make sure no additional subscription triggers on next tick
+    await Promise.resolve();
+    Sinon.assert.calledOnce(spy);
+  });
+
+  it("can dispatch other actions asynchronously", async () => {
+    interface State {
+      a: number;
+      b: number;
+      c: number;
+    }
+
+    const initState: State = { a: 0, b: 0, c: 0 };
+    let reducer = <A extends Action>(state = initState, action: A) => {
+      switch (action.type) {
+        case "A":
+          return { ...state, a: state.a + 1 };
+        case "B":
+          return { ...state, b: state.b + 1 };
+        case "C":
+          return { ...state, c: state.c + 1 };
+      }
+      return state;
+    };
+
+    let enhancer = enhancerFactory<State>(async (action, { dispatch }) => {
+      switch (action.type) {
+        case "A":
+          await Promise.resolve();
+          dispatch({ type: "B" });
+          break;
+        case "B":
+          await Promise.resolve();
+          // Dispatch twice to test debounce below
+          dispatch({ type: "C" });
+          dispatch({ type: "C" });
+          break;
+      }
+    });
+    let store = createStore<State>(reducer, enhancer);
+    let spy = Sinon.spy();
+    store.subscribe(spy);
+    store.dispatch({ type: "A" });
+    Sinon.assert.calledOnce(spy);
+    expect(store.getState()).to.deep.equal({ a: 1, b: 0, c: 0 });
+
+    // Wait one tick for B dispatch
+    await Promise.resolve();
+    expect(store.getState()).to.deep.equal({ a: 1, b: 1, c: 0 });
+
+    // Wait one tick for C dispatch
+    await Promise.resolve();
+    expect(store.getState()).to.deep.equal({ a: 1, b: 1, c: 2 });
 
     /*
-      Dispatch runs all actions synchronously, but doesn't call spies yet
-      because call is async.
+      This is the B dispatch's call to subscribe since we push async
+      subscribe updates back one tick to debounce.
     */
-    store.dispatch({ type: "A" });
-    expect(store.getState()).to.deep.equal({ a: true, b: true });
-    expect(aSpy.called).to.be.false;
-    expect(bSpy.called).to.be.false;
+    Sinon.assert.calledTwice(spy); // B dispatch call si
 
-    await Promise.all([aPromise, bPromise]);
-    expect(aSpy.called).to.be.true;
-    expect(bSpy.called).to.be.true;
-  });
+    // Wait for subscription to fire after C
+    await Promise.resolve();
+    Sinon.assert.calledThrice(spy);
 
-  it("can asynchronously dispatch more actions with origin tracking",
-  async () => {
-    // Create some deferrals to await async action terminating
-    let aResolve: (x: any) => any;
-    let aPromise = new Promise((resolve) => aResolve = resolve);
-    let bResolve: (x: any) => any;
-    let bPromise = new Promise((resolve) => bResolve = resolve);
-    let cResolve: (x: any) => any;
-    let cPromise = new Promise((resolve) => cResolve = resolve);
-
-    const reducer = wrap((state = {}, action: { type: string }, dispatch) => {
-      switch (action.type) {
-        case "A":
-          return {
-            state,
-            effects: [
-              call(dispatch, { type: "B"}),
-              call(aResolve, action)
-            ]
-          };
-        case "B":
-          return {
-            state,
-            effects: [
-              call(dispatch, { type: "C"}),
-              call(bResolve, action)
-            ]
-          };
-        case "C":
-          return {
-            state,
-            effects: [
-              call(cResolve, action)
-            ]
-          };
-      }
-      return { state };
-    });
-    let store = createStore(reducer, enhancerFactory({
-      idKey: "id",
-      originKey: "origin",
-      parentKey: "parent",
-      idFn: (a) => a.type
-    }));
-
-    store.dispatch({ type: "A" });
-    expect(await aPromise).to.deep.equal({
-      type: "A",
-      id: "A",
-      origin: "A"
-    });
-    expect(await bPromise).to.deep.equal({
-      type: "B",
-      id: "B",
-      origin: "A",
-      parent: "A"
-    });
-    expect(await cPromise).to.deep.equal({
-      type: "C",
-      id: "C",
-      origin: "A",
-      parent: "B"
-    });
-  });
-
-  it("can be run with fingerprint vars under a metaKey", async () => {
-    // Create some deferrals to await async action terminating
-    let aResolve: (x: any) => any;
-    let aPromise = new Promise((resolve) => aResolve = resolve);
-    let bResolve: (x: any) => any;
-    let bPromise = new Promise((resolve) => bResolve = resolve);
-
-    const reducer = wrap((state = {}, action: { type: string }, dispatch) => {
-      switch (action.type) {
-        case "A":
-          return {
-            state,
-            effects: [
-              call(dispatch, { type: "B"}),
-              call(aResolve, action)
-            ]
-          };
-        case "B":
-          return {
-            state,
-            effects: [
-              call(dispatch, { type: "C"}),
-              call(bResolve, action)
-            ]
-          };
-      }
-      return { state };
-    });
-    let store = createStore(reducer, enhancerFactory({
-      idKey: "id",
-      metaKey: "meta",
-      originKey: "origin",
-      parentKey: "parent",
-      idFn: (a) => a.type
-    }));
-
-    store.dispatch({ type: "A" });
-    expect(await aPromise).to.deep.equal({
-      type: "A",
-      meta: {
-        id: "A",
-        origin: "A"
-      }
-    });
-    expect(await bPromise).to.deep.equal({
-      type: "B",
-      meta: {
-        id: "B",
-        origin: "A",
-        parent: "A"
-      }
-    });
-  });
-
-  it("can be run without fingerprinting", async () => {
-    // Create some deferrals to await async action terminating
-    let aResolve: (x: any) => any;
-    let aPromise = new Promise((resolve) => aResolve = resolve);
-    let bResolve: (x: any) => any;
-    let bPromise = new Promise((resolve) => bResolve = resolve);
-
-    const reducer = wrap((state = {}, action: { type: string }, dispatch) => {
-      switch (action.type) {
-        case "A":
-          return {
-            state,
-            effects: [
-              call(dispatch, { type: "B"}),
-              call(aResolve, action)
-            ]
-          };
-        case "B":
-          return {
-            state,
-            effects: [
-              call(dispatch, { type: "C"}),
-              call(bResolve, action)
-            ]
-          };
-      }
-      return { state };
-    });
-    let store = createStore(reducer, enhancerFactory({
-      fingerprinting: false
-    }));
-
-    store.dispatch({ type: "A" });
-    expect(await aPromise).to.deep.equal({
-      type: "A",
-    });
-    expect(await bPromise).to.deep.equal({
-      type: "B",
-    });
+    // Make sure no additional subscription triggers on next tick
+    await Promise.resolve();
+    Sinon.assert.calledThrice(spy);
   });
 });

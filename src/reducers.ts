@@ -2,19 +2,9 @@
   Reducer for our putState action
 */
 import { Action } from "redux";
+import { PutAction } from "./types";
 
-export interface PutAction {
-  type: string;
-  payload: {
-    keys?: string[];
-    data: any;
-  };
-
-  // How we identify PutAction (since type may vary)
-  __putAction: true;
-}
-
-const isPutAction = (a: Action): a is PutAction => {
+export const isPutAction = (a: Action): a is PutAction => {
   return (a as PutAction).__putAction === true;
 };
 
@@ -36,8 +26,10 @@ const reduceSubState = (state: any, keys: string[], data: any): any => {
 /*
   Reduces PutActions. Uses array of strings as a path to some variable
   we want to replace. Creates nested objects as necessary to create path.
+  Don't do anything to handle undefined (initial) state since we don't want
+  to override whatever the store creator is providing.
 */
-export const reducePut = (state: any = {}, action: Action) => {
+export const reducePut = (state: any, action: Action) => {
   if (isPutAction(action)) {
     let { keys, data } = action.payload;
     return reduceSubState(state, keys || [], data);

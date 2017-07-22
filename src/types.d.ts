@@ -3,45 +3,16 @@
 */
 import { Action, Dispatch, Reducer } from "redux";
 
-/*
-  For declarative representation of function calls -- identical to how
-  redux-saga does this.
-*/
+export interface PutAction {
+  type: string;
+  payload: {
+    keys?: string[];
+    data: any;
+  };
 
-export interface Effect {
-  context: any;
-  fn: Function;
-  args: any[];
+  // How we identify PutAction (since type may vary)
+  __putAction: true;
 }
-
-export type EffectFn<F extends Function> =
-  F | [any, F] | {context: any, fn: F};
-
-export type EffectNamedFn<C extends {[P in Name]: Function},
-                              Name extends string> =
-  [C, Name] | {context: C, fn: Name};
-
-
-/*
-  Types for enhanced reducers.
-*/
-
-// Effects extracted while recalling
-export interface Update<S> {
-  state: S;
-  effects: Effect[];
-}
-
-// Effects + actions extracted while recalling
-export interface Continuation<S> extends Update<S> {
-  actions: Action[];
-}
-
-export type Loop<S> = (
-  state: S,
-  action: Action,
-  dispatch: Dispatch<S>
-) => Partial<Continuation<S>>;
 
 /*
   A debouncer is used to debounce multiple signals occurring within the same
@@ -59,6 +30,79 @@ export interface Debouncer {
     only if they received any previous calls in the last tick.
   */
   flush: () => void;
+}
+
+/*
+  getState and putState typing allow for specification of multiple nested
+  keys.
+*/
+export interface GetStateFn<S> {
+  (): S;
+  <K1 extends keyof S>(k1: K1): S[K1];
+  <K1 extends keyof S, K2 extends keyof S[K1]>(k1: K1, k2: K2): S[K1][K2];
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2]>(
+    k1: K1, k2: K2, k3: K3
+  ): S[K1][K2][K3];
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2],
+   K4 extends keyof S[K1][K2][K3]>(
+    k1: K1, k2: K2, k3: K3, k4: K4
+  ): S[K1][K2][K3][K4];
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2],
+   K4 extends keyof S[K1][K2][K3], K5 extends keyof S[K1][K2][K3][K4]>(
+    k1: K1, k2: K2, k3: K3, k4: K4, k5: K5
+  ): S[K1][K2][K3][K4][K5];
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2],
+   K4 extends keyof S[K1][K2][K3], K5 extends keyof S[K1][K2][K3][K4],
+   K6 extends keyof S[K1][K2][K3][K4][K5]>(
+    k1: K1, k2: K2, k3: K3, k4: K4, k5: K5, k6: K6
+  ): S[K1][K2][K3][K4][K5][K6];
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2],
+   K4 extends keyof S[K1][K2][K3], K5 extends keyof S[K1][K2][K3][K4],
+   K6 extends keyof S[K1][K2][K3][K4][K5]>(
+    k1: K1, k2: K2, k3: K3, k4: K4, k5: K5, k6: K6, ...rest: any[]
+  ): any;
+}
+
+type StateFn<S> = (state: S) => S;
+export interface PutStateFn<S> {
+  (fn: StateFn<S>): void;
+  <K1 extends keyof S>(k1: K1, fn: StateFn<S[K1]>): void;
+  <K1 extends keyof S, K2 extends keyof S[K1]>(
+    k1: K1, k2: K2, fn: StateFn<S[K1][K2]>
+  ): void;
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2]>(
+    k1: K1, k2: K2, k3: K3, fn: StateFn<S[K1][K2][K3]>
+  ): void;
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2],
+   K4 extends keyof S[K1][K2][K3]>(
+    k1: K1, k2: K2, k3: K3, k4: K4, fn: StateFn<S[K1][K2][K3][K4]>
+  ): void;
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2],
+   K4 extends keyof S[K1][K2][K3], K5 extends keyof S[K1][K2][K3][K4]>(
+    k1: K1, k2: K2, k3: K3, k4: K4, k5: K5, fn: StateFn<S[K1][K2][K3][K4][K5]>
+  ): void;
+  <K1 extends keyof S, K2 extends keyof S[K1], K3 extends keyof S[K1][K2],
+   K4 extends keyof S[K1][K2][K3], K5 extends keyof S[K1][K2][K3][K4],
+   K6 extends keyof S[K1][K2][K3][K4][K5]>(
+    k1: K1, k2: K2, k3: K3, k4: K4, k5: K5, k6: K6,
+    fn: StateFn<S[K1][K2][K3][K4][K5][K6]>
+  ): void;
+}
+
+/*
+  Functions available to Proc for interacting with Redux store
+*/
+export interface Hooks<S> {
+  getState: GetStateFn<S>;
+  putState: PutStateFn<S>;
+  dispatch: Dispatch<S>;
+}
+
+/*
+  Type for function that handles and dispatches additional actions
+*/
+export interface Proc<S> {
+  (action: Action, hooks: Hooks<S>): Promise<void>|void;
 }
 
 // Configuration for enhancer
