@@ -1,15 +1,6 @@
 import { expect } from "chai";
 import * as Sinon from "sinon";
 import createDebouncer from "./debouncer";
-import { nextTick } from "./utils";
-
-// Helper for testing async behavior
-const next = () => {
-  let r: () => void;
-  let p = new Promise((resolve) => r = resolve);
-  nextTick(() => r());
-  return p;
-};
 
 describe("debouncer", () => {
   it("defers wrapped function calls to next tick, calls once", async () => {
@@ -19,7 +10,7 @@ describe("debouncer", () => {
 
     // Check not called yet
     expect(spy.called).to.be.false;
-    await next();
+    await Promise.resolve();
 
     // Now called
     expect(spy.called).to.be.true;
@@ -34,8 +25,8 @@ describe("debouncer", () => {
     fn();
 
     // Wait for a couple ticks to verify no multiple async dispatches
-    await next();
-    await next();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(spy.callCount).to.equal(1);
   });
 
@@ -48,8 +39,8 @@ describe("debouncer", () => {
       Wait a couple of ticks before calling done and verifying spy
       wasn't called.
     */
-    await next();
-    await next();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(spy.called).to.be.false;
   });
 
@@ -88,13 +79,13 @@ describe("debouncer", () => {
     let fn = debounce(spy);
     fn();
 
-    await next();
+    await Promise.resolve();
     expect(spy.callCount).to.equal(1);
 
     fn();
     fn();
 
-    await next();
+    await Promise.resolve();
     expect(spy.callCount).to.equal(2);
   });
 

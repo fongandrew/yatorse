@@ -1,4 +1,3 @@
-import { nextTick } from "./utils";
 import { Debouncer } from "./types";
 
 /*
@@ -30,7 +29,7 @@ export const createDebouncer = (): Debouncer => {
       return () => {
         if (! pending) {
           pending = true;
-          nextTick(run);
+          Promise.resolve().then(run);
         }
       };
     },
