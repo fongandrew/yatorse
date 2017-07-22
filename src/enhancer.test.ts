@@ -21,7 +21,9 @@ describe("Enhancer with proc function", () => {
 
     let spy1 = Sinon.spy();
     let spy2 = Sinon.spy();
-    let enhancer = enhancerFactory<State>((action) => spy1(action));
+    let enhancer = enhancerFactory<State>((action) => spy1(action), {
+      fingerprinting: false
+    });
     let store = createStore<State>(reducer, enhancer);
     store.subscribe(spy2);
     store.dispatch({ type: "INCR" });
@@ -142,7 +144,7 @@ describe("Enhancer with proc function", () => {
     };
 
     let enhancer = enhancerFactory<State>((action, { dispatch }) => {
-      switch(action.type) {
+      switch (action.type) {
         case "A":
           dispatch({ type: "B" });
           break;
@@ -227,5 +229,103 @@ describe("Enhancer with proc function", () => {
     // Make sure no additional subscription triggers on next tick
     await Promise.resolve();
     Sinon.assert.calledThrice(spy);
+  });
+
+  it("can fingerprint actions for subsequent dispatches", () => {
+    let spy = Sinon.spy();
+    let reducer = <A extends Action>(state = {}, action: A) => {
+      spy(action);
+      return state;
+    };
+
+    let n = 0; // For idFn below
+    let enhancer = enhancerFactory<{}>((action, { dispatch }) => {
+      switch (action.type) {
+        case "A":
+          dispatch({ type: "B" });
+          break;
+        case "B":
+          dispatch({ type: "C" });
+          break;
+      }
+    }, {
+      idKey: "id",
+      parentKey: "parent",
+      originKey: "origin",
+      idFn: (action) => action.type + "-" + (++n)
+    });
+    let store = createStore(reducer, enhancer);
+    store.dispatch({ type: "A" });
+
+    Sinon.assert.calledWith(spy, {
+      type: "A",
+      id: "A-1"
+    });
+
+    Sinon.assert.calledWith(spy, {
+      type: "B",
+      id: "B-2",
+      parent: "A-1",
+      origin: "A-1"
+    });
+
+    Sinon.assert.calledWith(spy, {
+      type: "C",
+      id: "C-3",
+      parent: "B-2",
+      origin: "A-1"
+    });
+  });
+
+  it("can fingerprint actions for subsequent dispatches under a meta key",
+  () => {
+    let spy = Sinon.spy();
+    let reducer = <A extends Action>(state = {}, action: A) => {
+      spy(action);
+      return state;
+    };
+
+    let n = 0; // For idFn below
+    let enhancer = enhancerFactory<{}>(async (action, { dispatch }) => {
+      switch (action.type) {
+        case "A":
+          dispatch({ type: "B" });
+          break;
+        case "B":
+          dispatch({ type: "C" });
+          break;
+      }
+    }, {
+      idKey: "id",
+      parentKey: "parent",
+      originKey: "origin",
+      metaKey: "meta",
+      idFn: (action) => action.type + "-" + (++n)
+    });
+    let store = createStore(reducer, enhancer);
+    store.dispatch({ type: "A" });
+
+    Sinon.assert.calledWith(spy, {
+      type: "A",
+      meta: { id: "A-1" }
+    });
+
+    Sinon.assert.calledWith(spy, {
+      type: "B",
+      meta: {
+        id: "B-2",
+        parent: "A-1",
+        origin: "A-1"
+      }
+    });
+
+    Sinon.assert.calledWith(spy, {
+      type: "C",
+      meta: {
+        id: "C-3",
+        parent: "B-2",
+        origin: "A-1"
+      }
+    });
   });
 });

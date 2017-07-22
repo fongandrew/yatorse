@@ -3,6 +3,7 @@ import {
   Unsubscribe
 } from "redux";
 import { createDebouncer } from "./debouncer";
+import { getMeta, setMeta } from "./fingerprinting";
 import { reducePut } from "./reducers";
 import { createGetState, createPutState } from "./state-managers";
 import { Debouncer, Config, FullConfig, Proc } from "./types";
@@ -24,18 +25,36 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
   proc: Proc<S>,
   debouncer: Debouncer,
   getState: () => S
-}, conf: Config) => {
+}, conf: FullConfig) => {
   let { proc, debouncer, getState } = props;
 
   // Note the absence of flush here
   const dispatch = <A extends Action>(action: A) => {
+    /*
+      Reference dispatch that we will pass to proc. This gets modified
+      by fingerprint if applicable.
+    */
+    let wrappedDispatch = dispatch;
 
-    // Reducer responds first
+    // Modify action and dispatch to fingerprint for subsequent dispatches
+    if (conf.fingerprinting) {
+      let id = conf.idFn(action);
+      let meta = getMeta(action, conf);
+      action = setMeta(action, { [conf.idKey]: id }, conf);
+
+      // Set parent and origin for re-dispatch
+      wrappedDispatch = (action) => dispatch(setMeta(action, {
+        [conf.parentKey]: id,
+        [conf.originKey]: meta[conf.originKey] || id
+      }, conf));
+    }
+
+    // Reducer responds before proc
     let ret = next(action);
 
     // Then run proc with hooks
     proc(action, {
-      dispatch,
+      dispatch: wrappedDispatch,
       getState: createGetState(getState),
       putState: createPutState(dispatch, getState)
     });
@@ -71,8 +90,6 @@ export interface SimplifiedStoreCreator<S> {
 
 // See Config type for details.
 const DEFAULT_CONFIG: FullConfig = {
-  maxIterations: 15,
-  disableEffects: false,
   fingerprinting: true,
   idKey: "__id",
   originKey: "__origin",

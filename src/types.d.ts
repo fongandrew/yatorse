@@ -108,21 +108,9 @@ export interface Proc<S> {
 // Configuration for enhancer
 export interface FullConfig {
   /*
-    Maximum loop iterations we permit for an action to trigger another
-    round of actions. Safety check for infinite loops and possible bad ideas.
-  */
-  maxIterations: number;
-
-  /*
-    Disable side effects running during dispatch. May want to do this when
-    testing or in some other context where running effect code isn't desired.
-  */
-  disableEffects: boolean;
-
-  /*
     Effects may include dispatching other actions in the future. To help
     track things, we fingerprint each action with an ID by default (which
-    can get picked by Redux's dev tools) and the actions's parent (the last
+    can get picked up by Redux's dev tools) and the actions's parent (the last
     action responsible for dispatching this one) and the action's origin (the
     original non-side-effect-dispatch that triggered our action chain).
 
