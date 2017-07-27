@@ -58,7 +58,12 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
     proc(action, {
       dispatch: wrappedDispatch,
       getState: createGetState(getState),
-      putState: createPutState(action, dispatch, getState, conf.putActionConf)
+      putState: createPutState(
+        action,
+        wrappedDispatch,
+        getState,
+        conf.putActionConf
+      )
     });
 
     return ret;

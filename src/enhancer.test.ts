@@ -328,4 +328,35 @@ describe("Enhancer with proc function", () => {
       }
     });
   });
+
+  it("can fingerprint actions for put actions", () => {
+    let spy = Sinon.spy();
+    let reducer = <A extends Action>(state = {}, action: A) => {
+      spy(action);
+      return state;
+    };
+
+    let n = 0; // For idFn below
+    let enhancer = enhancerFactory<any>((action, { putState }) => {
+      switch (action.type) {
+        case "TEST":
+          putState("test", (s) => true);
+          break;
+      }
+    }, {
+      idKey: "id",
+      parentKey: "parent",
+      originKey: "origin",
+      idFn: (action) => action.type + "-" + (++n)
+    });
+    let store = createStore(reducer, enhancer);
+    store.dispatch({ type: "TEST" });
+
+    Sinon.assert.calledWith(spy, Sinon.match({
+      type: "TEST/PUT",
+      id: "TEST/PUT-2",
+      parent: "TEST-1",
+      origin: "TEST-1"
+    }));
+  });
 });
