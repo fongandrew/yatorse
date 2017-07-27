@@ -1,6 +1,8 @@
+import "babel-polyfill";
 import { AppContainer } from "react-hot-loader";
 import React from "react";
 import ReactDOM from "react-dom";
+import { Provider } from "react-redux";
 import store from "./store";
 import App from "./components/App";
 
@@ -8,7 +10,9 @@ const rootEl = document.getElementById("root");
 const render = Component => {
   ReactDOM.render(
     <AppContainer>
-      <Component />
+      <Provider store={store}>
+        <Component />
+      </Provider>
     </AppContainer>,
     rootEl
   );
