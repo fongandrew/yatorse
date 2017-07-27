@@ -1,7 +1,7 @@
 /*
   Shared types
 */
-import { Action, Dispatch, Reducer } from "redux";
+import { Action, Dispatch } from "redux";
 
 export interface PutAction {
   type: string;
@@ -60,7 +60,7 @@ export interface GetStateFn<S> {
   ): any;
 }
 
-type StateFn<S> = (state: S) => S;
+export type StateFn<S> = (state: S) => S;
 export interface PutStateFn<S> {
   (fn: StateFn<S>): void;
   <K1 extends keyof S>(k1: K1, fn: StateFn<S[K1]>): void;
