@@ -167,6 +167,51 @@ describe("Enhancer with proc function", () => {
     Sinon.assert.calledOnce(spy);
   });
 
+  it("can dispatch actions that skip procs", async () => {
+    interface State {
+      a: number;
+      b: number;
+      c: number;
+    }
+
+    const initState: State = { a: 0, b: 0, c: 0 };
+    let reducer = <A extends Action>(state = initState, action: A) => {
+      switch (action.type) {
+        case "A":
+          return { ...state, a: state.a + 1 };
+        case "B":
+          return { ...state, b: state.b + 1 };
+        case "C":
+          return { ...state, c: state.c + 1 };
+      }
+      return state;
+    };
+
+    let enhancer = enhancerFactory<State>((action, hooks) => {
+      let { dispatch } = hooks;
+      switch (action.type) {
+        case "A":
+          dispatch({ type: "B" }, true); // True => skip case B below
+          break;
+        case "B":
+          dispatch({ type: "C" });
+          break;
+      }
+    });
+    let store = createStore<State>(reducer, enhancer);
+    let spy = Sinon.spy();
+    store.subscribe(spy);
+    store.dispatch({ type: "A" });
+
+    // A triggers B which does not triggers C, all synchronously here.
+    expect(store.getState()).to.deep.equal({ a: 1, b: 1, c: 0 });
+    Sinon.assert.calledOnce(spy);
+
+    // Make sure no additional subscription triggers on next tick
+    await Promise.resolve();
+    Sinon.assert.calledOnce(spy);
+  });
+
   it("can dispatch other actions asynchronously", async () => {
     interface State {
       a: number;

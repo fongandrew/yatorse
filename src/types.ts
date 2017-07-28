@@ -90,9 +90,18 @@ export interface PutStateFn<S> {
   Functions available to Proc for interacting with Redux store
 */
 export interface Hooks<S> {
+
+  // Retrieve state by key(s)
   getState: GetStateFn<S>;
+
+  // Update state by key(s)
   putState: PutStateFn<S>;
-  dispatch: Dispatch<S>;
+
+  /*
+    Dispatch a new action -- optional bool to skip proc for
+    this dispatch
+  */
+  dispatch: <A extends Action>(action: A, skipProc?: boolean) => A;
 }
 
 /*

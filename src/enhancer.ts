@@ -28,10 +28,10 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
   debouncer: Debouncer,
   getState: () => S
 }, conf: FullConfig) => {
-  let { proc, debouncer, getState } = props;
+  const { proc, debouncer, getState } = props;
 
   // Note the absence of flush here
-  const dispatch = <A extends Action>(action: A) => {
+  const dispatch = <A extends Action>(action: A, skipProc = false) => {
     /*
       Reference dispatch that we will pass to proc. This gets modified
       by fingerprint if applicable.
@@ -45,26 +45,29 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
       action = setMeta(action, { [conf.idKey]: id }, conf);
 
       // Set parent and origin for re-dispatch
-      wrappedDispatch = (action) => dispatch(setMeta(action, {
-        [conf.parentKey]: id,
-        [conf.originKey]: meta[conf.originKey] || id
-      }, conf));
+      wrappedDispatch = (action: A, skipProc = false) =>
+        dispatch(setMeta(action, {
+          [conf.parentKey]: id,
+          [conf.originKey]: meta[conf.originKey] || id
+        }, conf), skipProc);
     }
 
     // Reducer responds before proc
     let ret = next(action);
 
     // Then run proc with hooks
-    proc(action, {
-      dispatch: wrappedDispatch,
-      getState: createGetState(getState),
-      putState: createPutState(
-        action,
-        wrappedDispatch,
-        getState,
-        conf.putActionConf
-      )
-    });
+    if (! skipProc) {
+      proc(action, {
+        dispatch: wrappedDispatch,
+        getState: createGetState(getState),
+        putState: createPutState(
+          action,
+          (action) => wrappedDispatch(action, true), // skip proc for putState
+          getState,
+          conf.putActionConf
+        )
+      });
+    }
 
     return ret;
   };
