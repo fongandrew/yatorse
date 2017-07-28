@@ -2,6 +2,7 @@ import {
   Action, Dispatch, StoreEnhancer, Reducer, Store,
   Unsubscribe
 } from "redux";
+import { createActionMatcher } from "./action-matcher";
 import { createDebouncer } from "./debouncer";
 import { getMeta, setMeta } from "./fingerprinting";
 import { reducePutFactory } from "./reducers";
@@ -29,6 +30,7 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
   getState: () => S
 }, conf: FullConfig) => {
   const { proc, debouncer, getState } = props;
+  const actionMatcher = createActionMatcher();
 
   // Note the absence of flush here
   const dispatch = <A extends Action>(action: A, skipProc = false) => {
@@ -65,8 +67,12 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
           (action) => wrappedDispatch(action, true), // skip proc for putState
           getState,
           conf.putActionConf
-        )
+        ),
+        onNext: actionMatcher.register
       });
+
+      // Proc any promises awaiting this action
+      actionMatcher.dispatch(action);
     }
 
     return ret;

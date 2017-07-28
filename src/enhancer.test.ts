@@ -404,4 +404,23 @@ describe("Enhancer with proc function", () => {
       origin: "TEST-1"
     }));
   });
+
+  it("can wait for other action types to be dispatched", async () => {
+    let spy = Sinon.spy();
+    let enhancer = enhancerFactory<any>(async (action, { onNext }) => {
+      if (action.type === "START") {
+        spy(await onNext("STOP"));
+      }
+    });
+    let store = createStore<any>(noopReducer, enhancer);
+
+    store.dispatch({ type: "START" });
+    await Promise.resolve();
+    Sinon.assert.notCalled(spy);
+
+    let action = { type: "STOP", payload: 123 }
+    store.dispatch(action);
+    await Promise.resolve();
+    Sinon.assert.calledWith(spy, Sinon.match(action));
+  });
 });

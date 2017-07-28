@@ -87,6 +87,20 @@ export interface PutStateFn<S> {
 }
 
 /*
+  Use action matcher to create one-off promises that get resolved when
+  a particular action is dispatched that matches a test.
+*/
+export interface ActionMatcher {
+  // Run all registered tests.
+  dispatch: Dispatch<any>;
+
+  // Same as onNext in the Hooks interface
+  register: <A extends Action>(
+    test: (A["type"] & string)|((action: Action) => boolean)
+  ) => Promise<A>;
+}
+
+/*
   Functions available to Proc for interacting with Redux store
 */
 export interface Hooks<S> {
@@ -97,11 +111,20 @@ export interface Hooks<S> {
   // Update state by key(s)
   putState: PutStateFn<S>;
 
-  /*
-    Dispatch a new action -- optional bool to skip proc for
-    this dispatch
-  */
+  // Dispatch a new action -- optional bool to skip proc for this dispatch
   dispatch: <A extends Action>(action: A, skipProc?: boolean) => A;
+
+  /*
+    Return promise that resolves when an action matching the test has been
+    dispatched. The test should either be a string (which matches the action
+    type) or a function that takes an action and returns a bool.
+
+    If the action is dispatched with skipProc = true, then this promise will
+    not trigger.
+  */
+  onNext: <A extends Action>(
+    test: (A["type"] & string)|((action: Action) => boolean)
+  ) => Promise<A>;
 }
 
 /*
