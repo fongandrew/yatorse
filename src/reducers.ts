@@ -2,11 +2,13 @@
   Reducer for our putState action
 */
 import { Action } from "redux";
-import { PutAction, PutActionConfig } from "./types";
+import { getMeta } from "./meta";
+import { PutAction, FullConfig } from "./types";
 
-export const isPutAction = (
-  a: Action, conf: PutActionConfig
-): a is PutAction => conf.test(a.type);
+export const isPutAction = (a: Action, conf: FullConfig): a is PutAction => {
+  let meta = getMeta(a, conf);
+  return !!meta[conf.putActionKey];
+};
 
 /*
   Recursively replaces some path in state with data.
@@ -29,7 +31,7 @@ const reduceSubState = (state: any, keys: string[], data: any): any => {
   (initial) state since we don't want to override whatever the store creator
   is providing.
 */
-export const reducePutFactory = (conf: PutActionConfig) =>
+export const reducePutFactory = (conf: FullConfig) =>
   <A extends Action>(state: any, action: A) => {
     if (isPutAction(action, conf)) {
       let { keys, data } = action.payload;

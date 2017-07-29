@@ -4,7 +4,7 @@ import {
 } from "redux";
 import { createActionMatcher } from "./action-matcher";
 import { createDebouncer } from "./debouncer";
-import { getMeta, setMeta } from "./fingerprinting";
+import { getMeta, setMeta } from "./meta";
 import { reducePutFactory } from "./reducers";
 import { createGetState, createPutState } from "./state-managers";
 import { Debouncer, Config, FullConfig, Proc } from "./types";
@@ -12,7 +12,7 @@ import { idFn } from "./utils";
 
 // Wrap reducer to handle putState actions -- putState runs first
 export const wrapReducer = <S>(reducer: Reducer<S>, conf: FullConfig) => {
-  const reducePut = reducePutFactory(conf.putActionConf);
+  const reducePut = reducePutFactory(conf);
   return <A extends Action>(state: S, action: A) => {
     /*
       Important to run original reducer first so as to set initial state
@@ -66,7 +66,7 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
           action,
           (action) => wrappedDispatch(action, true), // skip proc for putState
           getState,
-          conf.putActionConf
+          conf
         ),
         onNext: actionMatcher.register
       });
@@ -111,17 +111,8 @@ const DEFAULT_CONFIG: FullConfig = {
   originKey: "__origin",
   parentKey: "__parent",
   idFn,
-
-  // Put action if it sends with /PUT
-  putActionConf: {
-    type: (action) => action.type + "/PUT",
-    test: (type) => {
-      // string.endsWith("/PUT") with legacy browser supports
-      const suffix = "/PUT";
-      const n = type.lastIndexOf(suffix);
-      return n >= 0 && n === type.length - suffix.length;
-    }
-  }
+  putActionKey: "__putAction",
+  putActionType: (action) => action.type + "/PUT"
 };
 
 const enhancerFactory =

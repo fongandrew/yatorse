@@ -134,14 +134,6 @@ export interface Proc<S> {
   (action: Action, hooks: Hooks<S>): Promise<void>|void;
 }
 
-/*
-  Config options for determining how to group together putActions
-*/
-export interface PutActionConfig {
-  type: string|((action: Action) => string);
-  test: (type: string) => boolean;
-}
-
 // Configuration for enhancer
 export interface FullConfig {
   /*
@@ -170,10 +162,18 @@ export interface FullConfig {
   idFn: (action: Action) => string;
 
   /*
-    Group put action conf under one key because setting type and determing
-    whether type is for a put action go together.
+    Property used to denote putActions. Will also be stuck under the metaKey
+    property if set.
   */
-  putActionConf: PutActionConfig;
+  putActionKey: string;
+
+  /*
+    Default type for a put action. Type has no actual impact on the putState
+    reducer (that's what the putActionKey above is for) and is primarily for
+    informative purposes. That said, if there are other reducers targeting
+    this type, they will be triggered.
+  */
+  putActionType: string|((action: Action) => string);
 }
 
 // Opt object actually passed to enhancer

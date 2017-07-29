@@ -3,7 +3,8 @@
 */
 
 import { Action, Dispatch } from "redux";
-import { GetStateFn, PutStateFn, PutAction, PutActionConfig } from "./types";
+import { setMeta } from "./meta";
+import { GetStateFn, PutStateFn, PutAction, FullConfig } from "./types";
 
 // Helper to iterate over key list and get or create objects as necessary
 const getKeyState = (state: any, args: string[]) => {
@@ -33,7 +34,7 @@ export const createPutState = <S>(
   action: Action,
   dispatch: Dispatch<S>,
   getState: () => S,
-  conf: PutActionConfig
+  conf: FullConfig
 ): PutStateFn<S> => (...args: any[]) => {
   if (args.length < 1) {
     throw new Error("putState expects at least one arg");
@@ -47,12 +48,16 @@ export const createPutState = <S>(
   let state = getState();
   let keys = args.slice(0, -1);
   let substate = getKeyState(state, keys);
+  let type = typeof conf.putActionType === "string" ?
+    conf.putActionType : conf.putActionType(action);
   let putAction: PutAction = {
-    type: typeof conf.type === "string" ? conf.type : conf.type(action),
+    type,
     payload: {
       keys,
       data: fn(substate)
     }
   };
-  return dispatch(putAction);
+  return dispatch(setMeta(putAction, {
+    [conf.putActionKey]: true
+  }, conf));
 };

@@ -1,21 +1,16 @@
 import { expect } from "chai";
 import { reducePutFactory } from "./reducers";
-import { PutAction } from "./types";
+import { PutAction, FullConfig } from "./types";
 
 const reducePut = reducePutFactory({
-  type: (action) => action.type + "/PUT",
-  test: (type) => {
-    // string.endsWith("/PUT") with legacy browser supports
-    const suffix = "/PUT";
-    const n = type.lastIndexOf(suffix);
-    return n >= 0 && n === type.length - suffix.length;
-  }
-});
+  putActionKey: "__putAction"
+} as FullConfig);
 
-const createAction = (keys: string[], data: any): PutAction => ({
+const createAction = (keys: string[], data: any) => ({
   type: "TEST/PUT",
-  payload: { keys, data }
-});
+  payload: { keys, data },
+  __putAction: true
+} as PutAction & { __putAction: true });
 
 describe("reducePut", () => {
   it("doesn't mutate state", () => {
@@ -28,10 +23,7 @@ describe("reducePut", () => {
 
   it("ignores non-put actions", () => {
     let s1 = { a: 123 };
-    let action = {
-      ...createAction(["b"], 456),
-      type: "BLA"
-    };
+    let { __putAction, ...action } = createAction(["b"], 456);
     let s2 = reducePut(s1, action);
     expect(s2).to.deep.equal(s1);
   });

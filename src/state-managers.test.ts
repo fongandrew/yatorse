@@ -1,6 +1,8 @@
 import { expect } from "chai";
 import * as Sinon from "sinon";
+import { isPutAction } from "./reducers";
 import { createGetState, createPutState } from "./state-managers";
+import { FullConfig } from "./types";
 
 describe("createGetState creates function that", () => {
   it("returns info from state based on keys", () => {
@@ -22,11 +24,13 @@ describe("createGetState creates function that", () => {
 });
 
 describe("createPutState creates function that", () => {
+  const conf = {
+    putActionKey: "__putAction",
+    putActionType: (a) => a.type + "/TEST_PUT"
+  } as FullConfig;
+
   const getPutState = <S>(dispatch: Sinon.SinonSpy, state: S) => {
-    return createPutState({ type: "INCR" }, dispatch, () => state, {
-      test: (type) => type.endsWith("/TEST_PUT"),
-      type: (a) => a.type + "/TEST_PUT"
-    })
+    return createPutState({ type: "INCR" }, dispatch, () => state, conf);
   };
 
   it("dispatches a putState action with keys, payload, and custom type", () => {
@@ -34,13 +38,18 @@ describe("createPutState creates function that", () => {
     let putState = getPutState(dispatch, { x: { y: 5 }});
     putState("x", "y", (n) => n + 1);
 
-    Sinon.assert.calledWith(dispatch, {
+    let action = {
       type: "INCR/TEST_PUT",
       payload: {
         keys: ["x", "y"],
         data: 6
-      }
-    });
+      },
+      __putAction: true
+    };
+    Sinon.assert.calledWith(dispatch, action);
+
+    // Verify reducer recognizes this
+    expect(isPutAction(action, conf)).to.be.true;
   });
 
   it("replaces enter state if no keys", () => {
@@ -54,6 +63,7 @@ describe("createPutState creates function that", () => {
         keys: [],
         data: { x: 2 }
       },
+      __putAction: true
     });
   });
 
@@ -68,6 +78,35 @@ describe("createPutState creates function that", () => {
         keys: ["x", "y", "z"],
         data: 1
       },
+      __putAction: true
     });
+  });
+
+  it("allows setting a meta key for putAction config", () => {
+    let dispatch = Sinon.spy();
+    let metaConf = { ...conf, metaKey: "meta" };
+    let putState = createPutState(
+      { type: "INCR" },
+      dispatch,
+      () => ({ x: 2 }),
+      metaConf
+    );
+    putState("x", (n) => n + 1);
+
+    let action = {
+      type: "INCR/TEST_PUT",
+      payload: {
+        keys: ["x"],
+        data: 3
+      },
+      meta: {
+        __putAction: true
+      }
+    };
+    Sinon.assert.calledWith(dispatch, action);
+
+    // Verify reducer recognizes meta
+    expect(isPutAction(action, conf)).to.be.false;
+    expect(isPutAction(action, metaConf)).to.be.true;
   });
 });
