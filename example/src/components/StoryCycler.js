@@ -29,17 +29,18 @@ export class StoryCycler extends Component {
 }
 
 export default connect(
-  (state) => ({ story: selectNextStory(state) }),
-  (dispatch) => ({
+  (state, { listType }) => ({ story: selectNextStory(listType)(state) }),
+  (dispatch, { listType }) => ({
     onStart: (id) => dispatch({
       type: "START_HN",
       payload: {
         interval: 3000,
+        listType,
         id
       }
     }),
     onStop: (id) => dispatch({
-      type: "STOP",
+      type: "STOP_HN",
       payload: { id }
     })
   })

@@ -3,8 +3,9 @@
 
   Expect state to have two keys.
   * stories - String IDs mapped to actual story data
-  * storyOrder - Array of string IDs. First ID is the current story. Others are
-    queued for display later.
+  * storyOrders - Types of story lists mapped to array of string IDs.
+    First ID is the current story. Others are queued for display later.
+  * listType - What list the currentStoryOrder represents?
 */
 
 /* Actual API calls */
@@ -23,6 +24,11 @@ export const fetchNewStories = () => fetchJSON(
   "https://hacker-news.firebaseio.com/v0/newstories.json"
 );
 
+// Fetch recent highly ranked Hacker News stories
+export const fetchTopStories = () => fetchJSON(
+  "https://hacker-news.firebaseio.com/v0/topstories.json"
+);
+
 // Fetch a specific Hacker News item ID
 export const fetchStoryById = (id) => fetchJSON(
   `https://hacker-news.firebaseio.com/v0/item/${id}.json`
@@ -30,7 +36,7 @@ export const fetchStoryById = (id) => fetchJSON(
 
 
 /*
-  State keys + selectors, refatored here for use in containers.
+  State keys + selectors, refactored here for use in containers.
   Note that state is last param in curried form for composability with
   libraries like reselect.
 */
@@ -38,10 +44,11 @@ export const fetchStoryById = (id) => fetchJSON(
 const storiesKey = "stories";
 export const selectStory = (id) => (state) => (state[storiesKey] || {})[id];
 
-const storyOrderKey = "storyOrder";
-export const selectStoryOrder = (state) => state[storyOrderKey] || [];
-export const selectNextStory = (state) => {
-  let id = selectStoryOrder(state)[0];
+const storyOrderKey = "storyOrders";
+export const selectStoryOrder = (listType) => (state) =>
+  (state[storyOrderKey] || {})[listType] || [];
+export const selectNextStory = (listType) => (state) => {
+  let id = selectStoryOrder(listType)(state)[0];
   return id ? selectStory(id)(state) : undefined;
 };
 
@@ -49,17 +56,18 @@ export const selectNextStory = (state) => {
 /* Helper functions for proc */
 
 // Go to next story
-export const nextStory = async hooks => {
+export const nextStory = async (listType, hooks) => {
   let { getState, putState } = hooks;
 
   // Story order is an array of IDs. Shift one forward.
-  let order = selectStoryOrder(getState());
+  let order = selectStoryOrder(listType)(getState());
   order.shift();
   let nextId = order[0];
 
   // If no IDs in queue, fetch more IDs from server
   if (! nextId) {
-    order = await fetchNewStories();
+    let apiCall = listType === "new" ? fetchNewStories : fetchTopStories;
+    order = await apiCall();
     nextId = order[0];
   }
 
@@ -67,7 +75,7 @@ export const nextStory = async hooks => {
   await getStory(nextId, hooks);
 
   // Then update story list
-  putState(storyOrderKey, () => order);
+  putState(storyOrderKey, listType, () => order);
 };
 
 // Fetch a particular HN story if and only if not already fetched
@@ -88,7 +96,7 @@ export const cycleHN = async (action, hooks) => {
   if (action.type === "START_HN") {
     // Remember for stopping purposes
     let stopped = false;
-    let { id, interval } = action.payload;
+    let { id, interval, listType } = action.payload;
 
     /*
       Recursive interval / timeout. Use this pattern instead of an interval
@@ -97,7 +105,7 @@ export const cycleHN = async (action, hooks) => {
     */
     let cycle = async () => {
       if (stopped) return;
-      await nextStory(hooks);
+      await nextStory(listType, hooks);
       setTimeout(cycle, interval);
     };
 
