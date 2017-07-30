@@ -34,7 +34,7 @@ export default connect(
     onStart: (id) => dispatch({
       type: "START_HN",
       payload: {
-        interval: 3000,
+        interval: 5000,
         listType,
         id
       }
