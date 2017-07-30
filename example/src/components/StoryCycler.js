@@ -9,7 +9,7 @@ export class StoryCycler extends Component {
     let { story } = this.props;
     return <div>
       { story ?
-        <a href={story.url}>
+        <a href={"https://news.ycombinator.com/item?id=" + story.id}>
           { story.title }
         </a> :
         <span>
