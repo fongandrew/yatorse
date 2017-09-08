@@ -2,12 +2,12 @@
   Domain creation logic
 */
 
-import { Action } from "redux";
+import { Action } from 'redux';
 import {
   NamedReducer,
   TargetedDispatch,
   isTargetedDispatch
-} from "./named-reducers";
+} from './named-reducers';
 
 // Base interface options available for handler interface definition
 export interface BaseInterface<S> {
@@ -62,7 +62,7 @@ export class Domain<
   // Called by enhancer when action dispatched
   handle(action: Action) {
     if (! this.handlerIfc) {
-      throw new Error("Domain not connected to store.");
+      throw new Error('Domain not connected to store.');
     }
     let ifc = this.handlerIfc;
     return Promise.all(this.handlers.map(h => h(action, ifc)));
@@ -71,7 +71,7 @@ export class Domain<
   // Called by enhanced reducer to handle named reducer calls.
   reduce(state: S, name: string, payload: any): S {
     if (! this.handlerIfc) {
-      throw new Error("Domain not connected to store.");
+      throw new Error('Domain not connected to store.');
     }
 
     let val = this.handlerIfc[name as keyof I];
@@ -89,7 +89,7 @@ export class Domain<
     of checking each handler individually. It probably doesn't matter in
     most cases though.
   */
-  on<A extends Action>(type: A["type"], cb: Handler<A, I>): this;
+  on<A extends Action>(type: A['type'], cb: Handler<A, I>): this;
   on<A extends Action>(
     test: (action: Action) => boolean,
     cb: Handler<A, I>
@@ -98,7 +98,7 @@ export class Domain<
     pre: string|((action: Action) => boolean),
     cb: Handler<A, I>
   ) {
-    const test = typeof pre === "string" ?
+    const test = typeof pre === 'string' ?
       (a: Action) => a.type === pre : pre;
     const handler: Handler<A, I> = (action, ifc) => {
       if (test(action)) {

@@ -1,12 +1,12 @@
 import {
   Action, Dispatch, StoreEnhancer, Reducer, Store,
   Unsubscribe
-} from "redux";
-import { DEFAULT_CONFIG, Config, FullConfig } from "./config";
-import { Debouncer } from "./debouncer";
-import { Domain } from "./domains";
-import { makeReduce } from "./named-reducers";
-import { merge, getMeta, setMeta } from "./utils";
+} from 'redux';
+import { DEFAULT_CONFIG, Config, FullConfig } from './config';
+import { Debouncer } from './debouncer';
+import { Domain } from './domains';
+import { makeReduce } from './named-reducers';
+import { merge, getMeta, setMeta } from './utils';
 
 export type DomainMap<S, K extends keyof S> = {
   [X in K]: Domain<S[X], any>;
@@ -120,7 +120,7 @@ export const wrapDispatchAndFlush =
 
 // Wrap subscribe functionality to implement debounce
 export const wrapSubscribe =
-  (subscribe: Store<any>["subscribe"], debouncer: Debouncer) =>
+  (subscribe: Store<any>['subscribe'], debouncer: Debouncer) =>
   (listener: () => void): Unsubscribe =>
   subscribe(debouncer.debounce(listener));
 

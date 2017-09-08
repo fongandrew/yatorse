@@ -2,8 +2,8 @@
   Enhancer options
 */
 
-import { Action } from "redux";
-import { idFn } from "./utils";
+import { Action } from 'redux';
+import { idFn } from './utils';
 
 // Configuration for enhancer
 export interface FullConfig {
@@ -55,10 +55,10 @@ export type Config = Partial<FullConfig>;
 // Default config options
 export const DEFAULT_CONFIG: FullConfig = {
   fingerprinting: true,
-  idKey: "meta.id",
-  originKey: "meta.origin",
-  parentKey: "meta.parent",
+  idKey: 'meta.id',
+  originKey: 'meta.origin',
+  parentKey: 'meta.parent',
   idFn,
-  targetedDispatchKey: "meta.isTargetedDispatch",
+  targetedDispatchKey: 'meta.isTargetedDispatch',
   targetedDispatchType: (domain, reducer) => `${domain}/${reducer}`
 };

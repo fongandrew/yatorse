@@ -2,9 +2,9 @@
   Types and helpers for creating, managing named reducers.
 */
 
-import { Dispatch } from "redux";
-import { FullConfig } from "./config";
-import { setMeta } from "./utils";
+import { Dispatch } from 'redux';
+import { FullConfig } from './config';
+import { setMeta } from './utils';
 
 /*
   A named reducer isn't strictly a reducer in the Redux sense but rather a
@@ -35,9 +35,9 @@ export interface TargetedDispatch<S, P> {
 // Typeguard for TargetedDispatch
 export const isTargetedDispatch =
   (f: any): f is TargetedDispatch<any, any> => (
-    typeof f === "function" &&
+    typeof f === 'function' &&
     typeof (f as TargetedDispatch<any, any>)._setTargetedDispatchName
-             === "function"
+             === 'function'
   );
 
 // Factory for function used to converted named reducers into targeted
@@ -47,8 +47,8 @@ export const makeReduce =
   <S, P>(reducer: NamedReducer<S, P>): TargetedDispatch<S, P> => {
     let reducerName: string|undefined;
     let ret = ((payload: P) => {
-      if (! reducerName) throw new Error("Reducer name not set");
-      let type = typeof conf.targetedDispatchType === "string" ?
+      if (! reducerName) throw new Error('Reducer name not set');
+      let type = typeof conf.targetedDispatchType === 'string' ?
         conf.targetedDispatchType :
         conf.targetedDispatchType(domainName, reducerName, payload);
       let action = setMeta(
