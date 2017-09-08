@@ -32,6 +32,13 @@ export type TestCase =
   (assert: Assertions, sandbox: sinon.SinonSandbox) => void|Promise<void>;
 
 export const test = (name: string, tc: TestCase) => tape(name, t => {
+  // See https://github.com/substack/tape/issues/386
+  if (! tc.name) {
+    Object.defineProperty(tc, 'name', {
+      value: '<anonymous>'
+    });
+  }
+
   const assert: Assertions = {
     ...t,
     ...sinon.assert,
