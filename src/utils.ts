@@ -53,9 +53,9 @@ const separator = '.';
 export const getMeta = (obj: any, key: string): any => {
   let current = obj;
   let parts = key.split(separator);
-  for (let key in parts) {
+  for (let i in parts) {
     if (! current) return undefined;
-    current = current[key];
+    current = current[parts[i]];
   }
   return current;
 };
