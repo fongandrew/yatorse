@@ -1,11 +1,12 @@
 import { expect } from "chai";
 import * as Sinon from "sinon";
-import createDebouncer from "./debouncer";
+import { Debouncer } from "./debouncer";
 
-describe("debouncer", () => {
+describe("Debouncer", () => {
   it("defers wrapped function calls to next tick, calls once", async () => {
     let spy = Sinon.spy();
-    let { debounce } = createDebouncer();
+    let debouncer = new Debouncer();
+    let debounce = debouncer.debounce.bind(debouncer);
     debounce(spy)();
 
     // Check not called yet
@@ -18,7 +19,8 @@ describe("debouncer", () => {
 
   it("only calls wrapped function at most once per tick", async () => {
     let spy = Sinon.spy();
-    let { debounce } = createDebouncer();
+    let debouncer = new Debouncer();
+    let debounce = debouncer.debounce.bind(debouncer);
     let fn = debounce(spy);
     fn();
     fn();
@@ -32,7 +34,8 @@ describe("debouncer", () => {
 
   it("does not call wrapped function if never called", async () => {
     let spy = Sinon.spy();
-    let { debounce } = createDebouncer();
+    let debouncer = new Debouncer();
+    let debounce = debouncer.debounce.bind(debouncer);
     debounce(spy);
 
     /*
@@ -46,7 +49,9 @@ describe("debouncer", () => {
 
   it("can be triggered synchronously with flushing", () => {
     let spy = Sinon.spy();
-    let { debounce, flush } = createDebouncer();
+    let debouncer = new Debouncer();
+    let debounce = debouncer.debounce.bind(debouncer);
+    let flush = debouncer.flush.bind(debouncer);
     let fn = debounce(spy);
     fn();
     fn();
@@ -58,7 +63,9 @@ describe("debouncer", () => {
     let spy1 = Sinon.spy();
     let spy2 = Sinon.spy();
     let spy3 = Sinon.spy();
-    let { debounce, flush } = createDebouncer();
+    let debouncer = new Debouncer();
+    let debounce = debouncer.debounce.bind(debouncer);
+    let flush = debouncer.flush.bind(debouncer);
     debounce(spy1);
     let fn2 = debounce(spy2);
     let fn3 = debounce(spy3);
@@ -75,7 +82,8 @@ describe("debouncer", () => {
 
   it("resets debounce after each tick", async () => {
     let spy = Sinon.spy();
-    let { debounce } = createDebouncer();
+    let debouncer = new Debouncer();
+    let debounce = debouncer.debounce.bind(debouncer);
     let fn = debounce(spy);
     fn();
 
@@ -91,7 +99,9 @@ describe("debouncer", () => {
 
   it("resets after flushing", () => {
     let spy = Sinon.spy();
-    let { debounce, flush } = createDebouncer();
+    let debouncer = new Debouncer();
+    let debounce = debouncer.debounce.bind(debouncer);
+    let flush = debouncer.flush.bind(debouncer);
     let fn = debounce(spy);
     fn();
 

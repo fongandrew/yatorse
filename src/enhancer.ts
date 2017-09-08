@@ -3,10 +3,9 @@ import {
   Unsubscribe
 } from "redux";
 import { DEFAULT_CONFIG, Config, FullConfig } from "./config";
-import { createDebouncer } from "./debouncer";
+import { Debouncer } from "./debouncer";
 import { Domain } from "./domains";
 import { makeReduce } from "./named-reducers";
-import { Debouncer } from "./types";
 import { merge, getMeta, setMeta } from "./utils";
 
 export type DomainMap<S, K extends keyof S> = {
@@ -160,7 +159,7 @@ const createEnhancer = function<S, K extends keyof S>(
       // Wrap again to handle debouncer -- note that we auto-flush after
       // each dispatch triggered by directly calling dispatch on store,
       // but *not* when calling from within a domain handler.
-      let debouncer = createDebouncer();
+      let debouncer = new Debouncer();
       let dispatch = wrapDispatchAndFlush(dispatchNoFlush, debouncer);
       let subscribe = wrapSubscribe(store.subscribe, debouncer);
 
