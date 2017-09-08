@@ -2,6 +2,7 @@
 
 # Put Node bins in path
 export PATH := node_modules/.bin:$(PATH)
+export SHELL := /bin/bash
 
 default: build
 
