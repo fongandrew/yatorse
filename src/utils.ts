@@ -12,7 +12,7 @@ const randomString = (numChars: number) => {
     let n = Math.floor(Math.random() * charSet.length);
     chars.push(charSet.charAt(n));
   }
-  return chars.join(');
+  return chars.join('');
 };
 
 /*
