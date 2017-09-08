@@ -2,40 +2,78 @@ import {
   Action, Dispatch, StoreEnhancer, Reducer, Store,
   Unsubscribe
 } from "redux";
-import { createActionMatcher } from "./action-matcher";
+import { DEFAULT_CONFIG, Config, FullConfig } from "./config";
 import { createDebouncer } from "./debouncer";
-import { getMeta, setMeta } from "./meta";
-import { reducePutFactory } from "./reducers";
-import { createGetState, createPutState } from "./state-managers";
-import { Debouncer, Config, FullConfig, Proc } from "./types";
-import { idFn } from "./utils";
+import { Domain } from "./domains";
+import { makeReduce } from "./named-reducers";
+import { Debouncer } from "./types";
+import { merge, getMeta, setMeta } from "./utils";
+
+export type DomainMap<S, K extends keyof S> = {
+  [X in K]: Domain<S[X], any>;
+};
 
 // Wrap reducer to handle putState actions -- putState runs first
-export const wrapReducer = <S>(reducer: Reducer<S>, conf: FullConfig) => {
-  const reducePut = reducePutFactory(conf);
+export const wrapReducer = function<S, K extends keyof S>(
+  reducer: Reducer<S>,
+  domains: DomainMap<S, K>,
+  conf: FullConfig
+) {
   return <A extends Action>(state: S, action: A) => {
-    /*
-      Important to run original reducer first so as to set initial state
-      if necessary.
-    */
-    state = reducer(state, action);
-    return reducePut(state, action);
+    let initLoad = !state;
+
+    // Important to run original reducer first so as to set initial state
+    // provided by that reducer if necessary.
+    state = reducer(state, action) || {};
+
+    // Create copy of state object so we can safely mutate it. Note that
+    // we're implicitly assumign that state is just a normal object and
+    // not an array or something here.
+    state = merge(state);
+
+    // Initial load -- populate with initial state unless wrapped reducer
+    // did that already.
+    if (! initLoad) {
+      for (let domainName in domains) {
+        let current = state[domainName];
+        state[domainName] = current === void 0 ?
+          domains[domainName].initState : current;
+      }
+    }
+
+    // If this is a targeted dispatch action, call the named reducer.
+    let keys: [string, string]|undefined = getMeta(
+      action,
+      conf.targetedDispatchKey
+    );
+    if (keys) {
+      let domainName = keys[0] as keyof S;
+      let reducerName = keys[1];
+      let domain = domains[domainName];
+      if (! domain) {
+        throw new Error(`'${domainName}' domain not found`);
+      }
+      state[domainName] = domain.reduce(
+        state[domainName],
+        reducerName,
+        (action as any).payload
+      );
+    }
+
+    return state;
   };
 };
 
-// Wrap dispatch to call proc function
-export const wrapDispatch = <S>(next: Dispatch<S>, props: {
-  proc: Proc<S>,
-  debouncer: Debouncer,
-  getState: () => S
-}, conf: FullConfig) => {
-  const { proc, debouncer, getState } = props;
-  const actionMatcher = createActionMatcher();
+// Wrap dispatch to call domain handlers, fingerprint actions
+export const wrapDispatchNoFlush = function<S, K extends keyof S>(
+  next: Dispatch<S>,
+  domains: DomainMap<S, K>,
+  conf: FullConfig
+) {
+  const dispatch = <A extends Action>(action: A, skipHandlers = false) => {
 
-  // Note the absence of flush here
-  const dispatch = <A extends Action>(action: A, skipProc = false) => {
     /*
-      Reference dispatch that we will pass to proc. This gets modified
+      Reference dispatch that we will pass to handlers. This gets modified
       by fingerprint if applicable.
     */
     let wrappedDispatch = dispatch;
@@ -43,54 +81,43 @@ export const wrapDispatch = <S>(next: Dispatch<S>, props: {
     // Modify action and dispatch to fingerprint for subsequent dispatches
     if (conf.fingerprinting) {
       let id = conf.idFn(action);
-      let meta = getMeta(action, conf);
-      action = setMeta(action, { [conf.idKey]: id }, conf);
+      action = setMeta(action, conf.idKey, id);
 
       // Set parent and origin for re-dispatch
-      wrappedDispatch = (action: A, skipProc = false) =>
-        dispatch(setMeta(action, {
-          [conf.parentKey]: id,
-          [conf.originKey]: meta[conf.originKey] || id
-        }, conf), skipProc);
+      wrappedDispatch = (action: A, skipHandlers = false) => {
+        action = setMeta(action, conf.parentKey, id);
+        if (! getMeta(action, conf.originKey)) {
+          action = setMeta(action, conf.originKey, id);
+        }
+        return dispatch(action, skipHandlers);
+      };
     }
 
-    // Reducer responds before proc
+    // Reducer responds before domain code
     let ret = next(action);
 
-    // Then run proc with hooks
-    if (! skipProc) {
-      proc(action, {
-        dispatch: wrappedDispatch,
-        getState: createGetState(getState),
-        putState: createPutState(
-          action,
-          (action) => wrappedDispatch(action, true), // skip proc for putState
-          getState,
-          conf
-        ),
-        onNext: actionMatcher.register
-      });
-
-      // Proc any promises awaiting this action
-      actionMatcher.dispatch(action);
+    // Then run domain handlers
+    if (! skipHandlers) {
+      for (let key in domains) {
+        domains[key].handle(action);
+      }
     }
 
     return ret;
   };
 
-  /*
-    Flush here. This ensures that only direct, synchronous calls to
-    dispatch get flushed.
-  */
-  return <A extends Action>(action: A) => {
-    let ret = dispatch(action);
+  return dispatch;
+};
 
-    // Flush so normal dispatches get processed synchronously
+// Wrap dispatch with debouncer flush (so non-Yatorse dispatches get
+// processed synchronously)
+export const wrapDispatchAndFlush =
+  <S>(next: Dispatch<S>, debouncer: Debouncer) =>
+  <A extends Action>(action: A) => {
+    let ret = next(action);
     debouncer.flush();
-
     return ret;
   };
-};
 
 // Wrap subscribe functionality to implement debounce
 export const wrapSubscribe =
@@ -104,35 +131,46 @@ export interface SimplifiedStoreCreator<S> {
   (reducer: Reducer<S>, ...args: any[]): Store<S>;
 }
 
-// See Config type for details.
-const DEFAULT_CONFIG: FullConfig = {
-  fingerprinting: true,
-  idKey: "__id",
-  originKey: "__origin",
-  parentKey: "__parent",
-  idFn,
-  putActionKey: "__putAction",
-  putActionType: (action) => action.type + "/PUT"
+const createEnhancer = function<S, K extends keyof S>(
+  domains: DomainMap<S, K>,
+  conf: Config = {}
+): StoreEnhancer<S> {
+  let fullConf = { ...DEFAULT_CONFIG, ...conf };
+  return (
+    (next: SimplifiedStoreCreator<S>) =>
+    (reducer: Reducer<S>, ...args: any[]) => {
+      // Wrap reducer + dispatch to reference domains
+      let store = next(wrapReducer(reducer, domains, fullConf), ...args);
+      let dispatchNoFlush = wrapDispatchNoFlush(
+        store.dispatch,
+        domains,
+        fullConf
+      );
+
+      // Connect domains w/ reference to wrapped dispatcher
+      for (let domainName in domains) {
+        let domain = domains[domainName as K];
+        domain.connect({
+          getState: () => store.getState()[domainName],
+          dispatch: dispatchNoFlush,
+          reduce: makeReduce(domainName, dispatchNoFlush, fullConf)
+        });
+      }
+
+      // Wrap again to handle debouncer -- note that we auto-flush after
+      // each dispatch triggered by directly calling dispatch on store,
+      // but *not* when calling from within a domain handler.
+      let debouncer = createDebouncer();
+      let dispatch = wrapDispatchAndFlush(dispatchNoFlush, debouncer);
+      let subscribe = wrapSubscribe(store.subscribe, debouncer);
+
+      return {
+        ...store,
+        dispatch,
+        subscribe
+      };
+    }
+  );
 };
 
-const enhancerFactory =
-  <S>(proc: Proc<S>, conf: Config = {}): StoreEnhancer<S> =>
-  (next: SimplifiedStoreCreator<S>) =>
-  (reducer: Reducer<S>, ...args: any[]) => {
-    let fullConf = { ...DEFAULT_CONFIG, ...conf };
-    let debouncer = createDebouncer();
-    let store = next(wrapReducer(reducer, fullConf), ...args);
-    let dispatch = wrapDispatch(store.dispatch, {
-      proc,
-      debouncer,
-      getState: store.getState
-    }, fullConf);
-    let subscribe = wrapSubscribe(store.subscribe, debouncer);
-    return {
-      ...store,
-      dispatch,
-      subscribe
-    };
-  };
-
-export default enhancerFactory;
+export default createEnhancer;

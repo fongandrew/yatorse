@@ -16,6 +16,28 @@ const randomString = (numChars: number) => {
 };
 
 /*
+  Workaround until https://github.com/Microsoft/TypeScript/issues/10727
+  is resolved.
+*/
+export const merge = function<A, B = {}, C = {}, D = {}, E = {}, F = {}>(
+  a: A,
+  b?: B,
+  c?: C,
+  d?: D,
+  e?: E,
+  f?: F
+): A & B & C & D & E & F {
+  return {
+    ...(a as any || {}),
+    ...(b as any || {}),
+    ...(c as any || {}),
+    ...(d as any || {}),
+    ...(e as any || {}),
+    ...(f as any || {})
+  };
+}
+
+/*
   Defaut ID function for Action
 */
 export const idFn = (action: Action) => {
