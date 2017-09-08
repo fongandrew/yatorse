@@ -1,23 +1,23 @@
-import { expect } from 'chai';
+import { describe } from './test';
 import * as Sinon from 'sinon';
 import { Debouncer } from './debouncer';
 
-describe('Debouncer', () => {
-  it('defers wrapped function calls to next tick, calls once', async () => {
+describe('Debouncer', it => {
+  it('defers wrapped function calls to next tick, calls once', async t => {
     let spy = Sinon.spy();
     let debouncer = new Debouncer();
     let debounce = debouncer.debounce.bind(debouncer);
     debounce(spy)();
 
     // Check not called yet
-    expect(spy.called).to.be.false;
+    t.notCalled(spy);
     await Promise.resolve();
 
     // Now called
-    expect(spy.called).to.be.true;
+    t.called(spy);
   });
 
-  it('only calls wrapped function at most once per tick', async () => {
+  it('only calls wrapped function at most once per tick', async t => {
     let spy = Sinon.spy();
     let debouncer = new Debouncer();
     let debounce = debouncer.debounce.bind(debouncer);
@@ -29,10 +29,10 @@ describe('Debouncer', () => {
     // Wait for a couple ticks to verify no multiple async dispatches
     await Promise.resolve();
     await Promise.resolve();
-    expect(spy.callCount).to.equal(1);
+    t.calledOnce(spy);
   });
 
-  it('does not call wrapped function if never called', async () => {
+  it('does not call wrapped function if never called', async t => {
     let spy = Sinon.spy();
     let debouncer = new Debouncer();
     let debounce = debouncer.debounce.bind(debouncer);
@@ -44,10 +44,10 @@ describe('Debouncer', () => {
     */
     await Promise.resolve();
     await Promise.resolve();
-    expect(spy.called).to.be.false;
+    t.notCalled(spy);
   });
 
-  it('can be triggered synchronously with flushing', () => {
+  it('can be triggered synchronously with flushing', t => {
     let spy = Sinon.spy();
     let debouncer = new Debouncer();
     let debounce = debouncer.debounce.bind(debouncer);
@@ -56,10 +56,10 @@ describe('Debouncer', () => {
     fn();
     fn();
     flush();
-    expect(spy.callCount).to.equal(1);
+    t.calledOnce(spy);
   });
 
-  it('can debounce multiple functions', () => {
+  it('can debounce multiple functions', t => {
     let spy1 = Sinon.spy();
     let spy2 = Sinon.spy();
     let spy3 = Sinon.spy();
@@ -75,12 +75,12 @@ describe('Debouncer', () => {
     fn3();
     flush();
 
-    expect(spy1.callCount).to.equal(0);
-    expect(spy2.callCount).to.equal(1);
-    expect(spy3.callCount).to.equal(1);
+    t.notCalled(spy1);
+    t.calledOnce(spy2);
+    t.calledOnce(spy3);
   });
 
-  it('resets debounce after each tick', async () => {
+  it('resets debounce after each tick', async t => {
     let spy = Sinon.spy();
     let debouncer = new Debouncer();
     let debounce = debouncer.debounce.bind(debouncer);
@@ -88,16 +88,16 @@ describe('Debouncer', () => {
     fn();
 
     await Promise.resolve();
-    expect(spy.callCount).to.equal(1);
+    t.calledOnce(spy);
 
     fn();
     fn();
 
     await Promise.resolve();
-    expect(spy.callCount).to.equal(2);
+    t.calledTwice(spy);
   });
 
-  it('resets after flushing', () => {
+  it('resets after flushing', t => {
     let spy = Sinon.spy();
     let debouncer = new Debouncer();
     let debounce = debouncer.debounce.bind(debouncer);
@@ -106,12 +106,12 @@ describe('Debouncer', () => {
     fn();
 
     flush();
-    expect(spy.callCount).to.equal(1);
+    t.calledOnce(spy);
 
     fn();
     fn();
 
     flush();
-    expect(spy.callCount).to.equal(2);
+    t.calledTwice(spy);
   });
 });

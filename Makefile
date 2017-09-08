@@ -19,6 +19,6 @@ lint:
 	tslint --type-check --project tsconfig.json
 
 test:
-	mocha --recursive --reporter spec --bail \
-		--require test-init.js \
-		src/**/*.test.*
+	ts-node --project tsconfig.test.json \
+		node_modules/.bin/tape 'src/**/*.test.*' \
+		| tap-spec
