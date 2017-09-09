@@ -49,6 +49,11 @@ export class Domain<
   // Used by enhancer to create hooks
   connect(base: BaseInterface<S>) {
     this.handlerIfc = this.handlerDefn(base);
+    if (!this.handlerIfc || typeof this.handlerIfc !== 'object') {
+      throw new Error(
+        'Handler interface definition is not an object.'
+      );
+    }
 
     // Assign names to targeted dispatch
     for (let key in this.handlerIfc) {

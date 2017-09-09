@@ -32,7 +32,7 @@ export const wrapReducer = function<S, K extends keyof S>(
 
     // Initial load -- populate with initial state unless wrapped reducer
     // did that already.
-    if (! initLoad) {
+    if (initLoad) {
       for (let domainName in domains) {
         let current = state[domainName];
         state[domainName] = current === void 0 ?
