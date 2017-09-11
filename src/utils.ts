@@ -35,7 +35,7 @@ export const merge = function<A, B = {}, C = {}, D = {}, E = {}, F = {}>(
     ...(e as any || {}),
     ...(f as any || {})
   };
-}
+};
 
 /*
   Defaut ID function for Action
