@@ -15,7 +15,7 @@
 */
 
 import tape = require('tape');
-import { Test } from 'tape'; // Type
+import { Test, TestCase } from 'tape'; // Types
 import * as sinon from 'sinon';
 
 // Get type with actual Sinon asseriotns
@@ -28,10 +28,29 @@ export interface Assertions extends Test, SinonAssertions {
   match: typeof sinon.match;
 }
 
-export type TestCase =
+export type SandboxTestCase =
   (assert: Assertions, sandbox: sinon.SinonSandbox) => void|Promise<void>;
 
-export const test = (name: string, tc: TestCase) => tape(name, t => {
+export interface SandboxTestFn {
+  (name: string, tc: SandboxTestCase): void;
+}
+
+// Helper to wrap tape and its only / skip variants.
+export type TapeWrapper<W extends Function> = W & {
+  only: W;
+  skip: W;
+};
+
+const wrapTestFn = function<W extends Function>(
+  wrapper: (tape: (name: string, tc: TestCase) => void) => W
+): TapeWrapper<W> {
+  let ret = wrapper(tape) as TapeWrapper<W>;
+  ret.only = wrapper(tape.only);
+  ret.skip = wrapper(tape.skip);
+  return ret;
+};
+
+const wrapForSandbox = (t: Test) => (tc: SandboxTestCase) => {
   // See https://github.com/substack/tape/issues/386
   if (! tc.name) {
     Object.defineProperty(tc, 'name', {
@@ -66,15 +85,24 @@ export const test = (name: string, tc: TestCase) => tape(name, t => {
       sandbox.restore();
       console.error(err); // Get proper stack trace
       t.error(err);
-    });
-});
+    }
+  );
+};
+
+export const test = wrapTestFn<SandboxTestFn>(
+  tape => (name, tc) => tape(name, t => wrapForSandbox(t)(tc))
+);
 
 // Group tape tests together
 export const describe = function(
   groupName: string,
-  fn: (it: typeof test) => void
+  fn: (it: TapeWrapper<SandboxTestFn>) => void
 ) {
-  fn((name, tc) => test(`${groupName}: ${name}`, tc));
+  let prefix = groupName + ': ';
+  let it = wrapTestFn<SandboxTestFn>(
+    tape => (name, tc) => tape(prefix + name, t => wrapForSandbox(t)(tc))
+  );
+  return fn(it);
 };
 
 export default test;
