@@ -12,6 +12,7 @@
     "noImplicitReturns": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
+    "experimentalDecorators": true,
     "noFallthroughCasesInSwitch": true,
     "strictNullChecks": true,
     "module": "commonjs",
